@@ -1,4 +1,7 @@
+from audioop import mul
+import math
 import random
+from numpy import real
 import pygame
 import pygame.freetype
 from pygame.locals import (
@@ -21,34 +24,34 @@ screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT))
 gravity = pygame.Vector2((0, 0.5))
 buoyancy = pygame.Vector2((0, -0.55))
 
-level = [
-        "PPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPP",
-        "PPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPP",
-        "PP                                                                                                   PP",
-        "PP                                                                                                   PP",
-        "PP                                                                                                   PP",
-        "PP                    PPPPPPPPPPP                                                                    PP",
-        "PP                                                                                                   PP",
-        "PP               WWWWWWWWW                                                                           PP",
-        "PP                WWWWWW                                                                             PP",
-        "PP      PPP       WWWWW                                                            PPPPPPPPPPPP      PP",
-        "PP PP P                                                                                              PP",
-        "PP                    B     SSSSSSS                                                                  PP",
-        "PP                 PPPPPP                   PPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPP",
-        "PP          1                                                                                        PP",
-        "PP         PPPPPPP                                                                                   PP",
-        "PP                      3                                                                            PP",
-        "PP                     PPPPPP                                                                        PP",
-        "PP         <B                                                                                        PP",
-        "PP   PPPPPPPPPPP                                                                                     PP",
-        "PP                    >  B                                            PPPPPPPPP                      PP",
-        "PP                 PPPPPPPPPPP  P  WWWWWWW                                                           PP",
-        "PP                              P  WWWWWWW                                                           PP",
-        "PP                              P  WWWWWWW                                                           PP",
-        "PP                              P  WWWWWWW                                                           PP",
-        "PP                              P  WWWWWWW                                                           PP",
-        "PPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPP",
-        "PPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPP"]
+level = (
+        "PPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPP",
+        "PPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPP",
+        "PP                                                                                                                            PP",
+        "PP                                                                                                                            PP",
+        "PP                                                                                                                            PP",
+        "PP                    PPPPPPPPPPP                                                                                             PP",
+        "PP                                                                                                                            PP",
+        "PP               WWWWWWWWW                                                                                                    PP",
+        "PP                WWWWWW                                                                                                      PP",
+        "PP      PPP       WWWWW                                                            PPPPPPPPPPPP                               PP",
+        "PP PP P                                                                                                                       PP",
+        "PP                    B     SSSSSSS                                                                                           PP",
+        "PP                 PPPPPP                   PPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPP        PPPPPPPPPPPPPPPPP",
+        "PP          1                                                                                                                 PP",
+        "PP         PPPPPPP                                                                                                            PP",
+        "PP                      3                                                                                                     PP",
+        "PP                     PPPPPP                                                                                                 PP",
+        "PP         <B                                                                                                                 PP",
+        "PP   PPPPPPPPPPP                                                                                                              PP",
+        "PP                    >  B                                            PPPPPPPPP                                               PP",
+        "PP                 PPPPPPPPPPP  P  WWWWWWW                                                                                    PP",
+        "PP                              P  WWWWWWW                                                                                    PP",
+        "PP                              P  WWWWWWW                                                                                    PP",
+        "PP                              P  WWWWWWW                                                                                    PP",
+        "PP                              P  WWWWWWW                                                                                    PP",
+        "PPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPP",
+        "PPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPP")
 
 
 class Sign(pygame.sprite.Sprite):
@@ -83,9 +86,9 @@ class Water(pygame.sprite.Sprite):
         water.add(self)
 
     def update(self):
-        potential_spots = [[0, 1], [1, 1], [-1, 1]]
+        potential_spots = ((0, 1), (1, 1), (-1, 1))
         for spot in potential_spots:
-            new_spot = [self.rect.center[0]+spot[0]*TILE_SIZE, self.rect.center[1]+spot[1]*TILE_SIZE]
+            new_spot = (self.rect.center[0]+spot[0]*TILE_SIZE, self.rect.center[1]+spot[1]*TILE_SIZE)
             if not any(wall.rect.collidepoint(new_spot) for wall in walls) and not any(water_block.rect.collidepoint(new_spot) for water_block in water):
                 self.rect.move_ip(spot[0]*TILE_SIZE, spot[1]*TILE_SIZE)
                 
@@ -107,8 +110,7 @@ class Gravity_thing(pygame.sprite.Sprite):
         self.inWater = False
         self.onRope = False
         self.freefall = False
-        self.potentialx = 0
-        self.potentialy = 0
+        self.velocity = 0
         all_sprites.add(self)
         gravity_things.add(self)
 
@@ -137,8 +139,10 @@ class Gravity_thing(pygame.sprite.Sprite):
         friction_y = pygame.Vector2((0, 0.02))
         friction_x = pygame.Vector2((0.02, 0))
         if self.inWater:
+            self.freefall = False
             friction_x = pygame.Vector2((3, 0))
         if self.onGround:
+            self.freefall = False
             friction_x = pygame.Vector2((2, 0))
         if isinstance(self, Node):
             friction_y = pygame.Vector2((0, 1))
@@ -155,6 +159,7 @@ class Gravity_thing(pygame.sprite.Sprite):
                 
 
     def moving(self):
+        self.velocity = self.vector.magnitude()
         if isinstance(self, Node):
             if self.sticked:
                 return
@@ -165,120 +170,71 @@ class Gravity_thing(pygame.sprite.Sprite):
             dist_x, dist_y, pnode = self.dist()
 
 
-            
-        if self.inWater and not pygame.sprite.spritecollideany(self, water):
-            self.inWater = False
         if pygame.sprite.spritecollideany(self, water):
             self.inWater = True
-        if self.inWater:
             self.buoyancy()
-        else:
+        else: 
+            self.inWater = False
             self.gravity()
+
         self.friction()
         self.onGround = False
 
-        
-        self.rect.move_ip(self.vector.x, 0)
 
         if self == player:
             if self.hooked[0]:
-                #print("vector.x: ", self.vector.x)
-                #print("vector.y: ", self.vector.y)
+                self.vector.x = 0; self.vector.y = 0
+
                 x,y = self.hooked[0].rect.center
                 pygame.draw.line(screen, [0,0,0], [player.rect.center[0], player.rect.center[1]],[x,y])
-                dist_x = abs(x - self.rect.center[0])
-                dist_y = abs(y - self.rect.center[1])
-                dist = self.hooked[1]
-                distt = (dist_x**2+dist_y**2)**0.5
-                #pygame.draw.rect(screen,[0,0,0],(x-dist, y-dist, dist*2, dist*2), 2)
 
-                if dist_x >= dist:
-                    #print("y: ",self.potentialy)
-                    self.move(-self.vector.x, 0)
-                    #self.vector.x = 0
-                    #print("max x")
-                    #self.move(0, self.potentialy)
-                    #self.potentialy = 0
-                    
-                elif distt > dist:
-                    #print("x: ", self.vector.x)
-                    if  self.rect.center[0] < x:
-                        new_y = ((dist**2 - dist_x**2)**0.5 - dist_y).real
-                    else: new_y = -((dist**2 - dist_x**2)**0.5 - dist_y).real
+                if self.direction == "right":
+                    multiply = 1
+                else: multiply = -1
 
-                    if (self.rect.center[0] < x and self.rect.center[1] < y) or (self.rect.center[0] > x and self.rect.center[1] > y):
-                        new_y *= -1
+                self.hooked[2] *= 1.01
 
-                    #self.potentialy += new_y/2
-                    #self.rect.move_ip(0, new_y/2)
-                    #print("new y: ", new_y)
-                    if new_y < 0:
-                        self.move(0, (new_y - self.vector.y)*1.01)
-                    else: self.move(0, (new_y + self.vector.y)*1.01)
-                    #self.vector.x *= 0.95
+                vector_to_me = (x - self.rect.center[0], y - self.rect.center[1])
+
+                if abs(vector_to_me[1]) < 20:
+                    self.end_hook()
+
+                perp_vector = (1, -vector_to_me[0]/vector_to_me[1])
+                k = self.hooked[2]/(abs(perp_vector[0]) + abs(perp_vector[1]))
+                
+                self.vector.x = perp_vector[0]*k*multiply
+                self.vector.y = perp_vector[1]*k*multiply
+
+        
+        self.rect.move_ip(self.vector.x, 0)
         
         block_hit_list = pygame.sprite.spritecollide(self, walls, False)
         for block in block_hit_list:
             if block != self:
                 if self.vector.x > 0:
                     self.rect.right = block.rect.left
-                    if self.vector.y > 5:
-                        self.vector.y *= 0.5
+                    if self != player or not self.hooked[0]:
+                        if self.vector.y > 5:
+                            self.vector.y *= 0.5
                 elif self.vector.x < 0:
                     self.rect.left = block.rect.right
-                    if self.vector.y > 5:
-                        self.vector.y *= 0.5
+                    if self != player or not self.hooked[0]:
+                        if self.vector.y > 5:
+                            self.vector.y *= 0.5
                 self.vector.x = 0
         
         box_hit_list = pygame.sprite.spritecollide(self, boxes, False)
         for box in box_hit_list:
             if box != self:
-                if (self.vector.x-box.vector.x) > 0:
+                if self.vector.x > 0:
                     self.rect.right = box.rect.left
-                    box.rect.move_ip(box.speed,0)
-                    #box.vector.x += box.speed
-                elif (self.vector.x-box.vector.x) < 0:
+                    box.move(box.speed, 0)
+                elif self.vector.x < 0:
                     self.rect.left = box.rect.right
-                    box.rect.move_ip(-box.speed,0)
-                    #box.vector.x -= box.speed
+                    box.move(-box.speed, 0)
 
  
         self.rect.move_ip(0, self.vector.y)
-
-        if self == player:
-            if self.hooked[0]:
-                x,y = self.hooked[0].rect.center
-                pygame.draw.line(screen, [0,0,0], [player.rect.center[0], player.rect.center[1]],[x,y])
-                dist_x = abs(x - self.rect.center[0])
-                dist_y = abs(y - self.rect.center[1])
-                dist = self.hooked[1]
-                distt = (dist_x**2+dist_y**2)**0.5
-                #pygame.draw.rect(screen,[0,0,0],(x-dist, y-dist, dist*2, dist*2), 2)
-
-                if dist_y >= dist:
-                    #print("x: ",self.potentialx)
-                    self.move(0, -self.vector.y)
-                    #self.vector.y = 0
-                    #print("max y")
-                    #self.move(self.potentialx, 0)
-                    #self.potentialx = 0
-                
-                elif distt > dist:
-                    #print("y: ", self.vector.y)
-
-                    if self.rect.center[1] < y:
-                        new_x = ((((dist**2-dist_y**2)**0.5))-dist_x).real
-                    else: new_x = -((((dist**2-dist_y**2)**0.5))-dist_x).real
-
-                    if (self.rect.center[0] < x and self.rect.center[1] < y) or (self.rect.center[0] > x and self.rect.center[1] > y):
-                        new_x *= -1
-
-                    #self.potentialx += new_x/2
-                    #self.rect.move_ip(new_x/2, 0)
-                    #print("new x: ", new_x)
-                    self.move(new_x/2, 0)
-                    #self.move((new_x - self.vector.x), 0)
-                    self.vector.y *= 0.95
         
         block_hit_list = pygame.sprite.spritecollide(self, walls, False)
         box_hit_list = pygame.sprite.spritecollide(self, boxes, False)
@@ -294,13 +250,13 @@ class Gravity_thing(pygame.sprite.Sprite):
         box_hit_list = pygame.sprite.spritecollide(self, boxes, False)
         for box in box_hit_list:
             if box != self:
-                if (self.vector.y-box.vector.y) > 0:
+                if self.vector.y > 0:
                     self.rect.bottom = box.rect.top
                     self.onGround = True
-                    box.vector.y += box.speed
-                elif (self.vector.y-box.vector.y) < 0:
+                    #box.move(0, box.speed)
+                elif self.vector.y < 0:
                     self.rect.top = box.rect.bottom
-                    box.vector.y -= box.speed
+                    #box.move(0, -box.speed)
                 self.vector.y = 0
 
 
@@ -315,9 +271,11 @@ class Gravity_thing(pygame.sprite.Sprite):
                 self.vector.y = 0
 
             self.freefall = False
+        
+        if self == player and self.hooked[0]:
+            if spikess or box_hit_list or block_hit_list:
+                self.end_hook()
 
-        if self.onGround or self.inWater:
-            self.freefall = False
 
     def hp_change(self, hp):
         self.hp += hp
@@ -327,7 +285,7 @@ class Gravity_thing(pygame.sprite.Sprite):
                     coin = Coin(list(self.rect.midbottom))
                     self.kill()
                     coin.vector.y -= 7
-                    coin.vector.x += random.choice([-2,2,2.5,-2.5,1,-1,1.5,-1.5, 1.2,-1.2,2.2,-2.2])
+                    coin.vector.x += random.choice((-2,2,2.5,-2.5,1,-1,1.5,-1.5, 1.2,-1.2,2.2,-2.2))
             self.kill()
         
             
@@ -353,25 +311,7 @@ class Creature(Gravity_thing):
                 self.coins += 1
                 coin.kill()
 
-            if self.hooked[0]:
-
-                if abs(self.vector.y ) > 20:
-                    if self.vector.y > 0:
-                        self.vector.y = 20
-                    else: self.vector.y = -20
-                    
-                self.vector.y *= 0.97
-                self.potentialx *= 0.65
-                self.potentialy *= 0.65
-
-                #print("x: ", self.potentialx)
-                #print("y: ", self.potentialy)
-                #if self.vector.y < 0:
-                  #  self.vector.y *= 1.005
-                
-                self.vector.x *= 0.97
-
-            elif not self.freefall: self.vector.x = 0               
+            if not self.freefall: self.vector.x = 0               
 
             if not self.hooked[0] and not self.freefall:
                 rope_collisions = pygame.sprite.spritecollide(self, nodes, False)
@@ -401,7 +341,8 @@ class Creature(Gravity_thing):
                     if self.onRope:
                         self.onRope.move(self.speed, 0)
                 if pressed_keys[K_SPACE]:
-                    self.shoot()               
+                    self.shoot()
+                    print(self.velocity)             
  
 
         else:
@@ -437,7 +378,12 @@ class Player(Creature):
         super().__init__([SCREEN_WIDTH//2, SCREEN_HEIGHT//2], 8, 100)
         self.coins = 0
         self.onRope = False
-        self.hooked = [False, 0]
+        self.hooked = [False, 0, 0]
+
+    def end_hook(self):
+        self.hooked = [False, 0, 0]
+        self.freefall = True
+        self.vector.y *= 1.3
 
 
 class Coin(Gravity_thing):
@@ -572,7 +518,7 @@ class Hook(pygame.sprite.Sprite):
             dist = (dist_x**2+dist_y**2)**0.5
 
             if dist > 100:
-                player.hooked = [self.node, dist]
+                player.hooked = [self.node, dist, who.velocity]
         
                 
 
@@ -708,13 +654,9 @@ while running:
             x,y = pygame.mouse.get_pos()
             hook = Hook([x,y], player)
         elif event.type == pygame.MOUSEBUTTONUP:
-            player.hooked = [False, 0]
-            player.freefall = True
-            player.vector.y *= 1.3
+            player.end_hook()
 
 
-    #x,y = pygame.mouse.get_pos()
-    #rope.nodes[2].rect.center = [x,y]
     screen.fill((135, 206, 250))
     offset_x, offset_y = camera.update(target)
     clouds.update()
@@ -723,11 +665,7 @@ while running:
     for entity in all_sprites:
         if entity != player:
             entity.rect.move_ip(offset_x, offset_y)
-        if not isinstance(entity, Water):
-            screen.blit(entity.surf, entity.rect)
-
-    for water_block in water:
-        screen.blit(water_block.surf, water_block.rect)
+        screen.blit(entity.surf, entity.rect)
     
     for gravity_thing in gravity_things:
         if pygame.sprite.spritecollideany(gravity_thing, bullets):
