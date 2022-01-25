@@ -1,7 +1,6 @@
-from audioop import mul
 import math
 import random
-from numpy import real
+import os
 import pygame
 import pygame.freetype
 from pygame.locals import (
@@ -545,22 +544,20 @@ class Bullet(pygame.sprite.Sprite):
         if pygame.sprite.spritecollideany(self, boxes):
             self.velocity = 0.01
             
+cloud_image = pygame.image.load(r'C:/Users/danka/Desktop/Peter/Python/materials/python-sockets-tutorial/mike_cloud.png')
 
 class Cloud(pygame.sprite.Sprite):
     def __init__(self):
         super(Cloud, self).__init__()
-        self.surf = pygame.Surface([80,50])
-        self.surf.fill([200,200,200])
-        self.rect = self.surf.get_rect(
-            center=(
-                random.randint(SCREEN_WIDTH + 20, SCREEN_WIDTH + 100),
-                random.randint(0, SCREEN_HEIGHT),
-            )
-        )
+        self.x = random.randint(SCREEN_WIDTH + 20, SCREEN_WIDTH + 100)
+        self.y = random.randint(0, SCREEN_HEIGHT)
+        
 
-    def update(self):
-        self.rect.move_ip(-5, 0)
-        if self.rect.right < 0:
+    def update(self, offset_x, offset_y):
+        screen.blit(cloud_image, (self.x, self.y))
+        self.x -= 5 - offset_x
+        self.y += offset_y
+        if self.x < 0:
             self.kill()
 
 class Camera():
@@ -659,13 +656,14 @@ while running:
 
     screen.fill((135, 206, 250))
     offset_x, offset_y = camera.update(target)
-    clouds.update()
+    clouds.update(offset_x, offset_y)
     bullets.update()
     water.update()
     for entity in all_sprites:
-        if entity != player:
-            entity.rect.move_ip(offset_x, offset_y)
-        screen.blit(entity.surf, entity.rect)
+        if entity not in clouds:
+            if entity != player:
+                entity.rect.move_ip(offset_x, offset_y)
+            screen.blit(entity.surf, entity.rect)
     
     for gravity_thing in gravity_things:
         if pygame.sprite.spritecollideany(gravity_thing, bullets):
