@@ -1,19 +1,20 @@
 import math
 import random
 import os
+import sys
 import pygame
 import pygame.freetype
 from pygame.locals import (
-    RLEACCEL,
     K_UP,
     K_DOWN,
     K_LEFT,
     K_RIGHT,
-    K_u,
     K_ESCAPE,
     KEYDOWN,
     QUIT,
     K_SPACE)
+
+os.chdir(os.path.dirname(sys.argv[0]))
 
 pygame.init()
 SCREEN_WIDTH = 800
@@ -94,10 +95,14 @@ class Water(pygame.sprite.Sprite):
         
 
 class Gravity_thing(pygame.sprite.Sprite):
-    def __init__(self, position, speed, max_hp, weight):
+    def __init__(self, position, speed, max_hp, weight, noImage=True):
         super(Gravity_thing, self).__init__()
         self.surf = pygame.Surface([30,30])
-        self.surf.fill([50,50,50])
+        if noImage:
+            self.surf.fill([50,50,50])
+        else: 
+            self.surf.fill([0,0,0])
+            self.surf.set_alpha(0)
         self.rect = self.surf.get_rect(bottomleft=position)
         self.position = position
         self.onGround = False
@@ -195,7 +200,7 @@ class Gravity_thing(pygame.sprite.Sprite):
 
                 vector_to_me = (x - self.rect.center[0], y - self.rect.center[1])
 
-                if abs(vector_to_me[1]) < 20:
+                if abs(vector_to_me[1]) < 40:
                     self.end_hook()
 
                 perp_vector = (1, -vector_to_me[0]/vector_to_me[1])
@@ -289,8 +294,8 @@ class Gravity_thing(pygame.sprite.Sprite):
         
             
 class Creature(Gravity_thing):
-    def __init__(self, position, speed, max_hp):
-        super(Creature, self).__init__(position, speed, max_hp, 1)
+    def __init__(self, position, speed, max_hp, noImage=True):
+        super(Creature, self).__init__(position, speed, max_hp, 1, noImage)
         self.gun_ready = True
         self.max_hp = max_hp
         self.hp = max_hp
@@ -303,66 +308,6 @@ class Creature(Gravity_thing):
         pygame.draw.rect(screen,[255,0,0],(self.rect.left-self.max_hp*0.25+self.rect.width//2, self.rect.top-30, 0.5*self.hp, 5))
 
 
-    def update(self):
-        if isinstance(self, Player):
-            coin_collisions = pygame.sprite.spritecollide(self, coins, False)
-            for coin in coin_collisions:
-                self.coins += 1
-                coin.kill()
-
-            if not self.freefall: self.vector.x = 0               
-
-            if not self.hooked[0] and not self.freefall:
-                rope_collisions = pygame.sprite.spritecollide(self, nodes, False)
-                if not rope_collisions:
-                    self.onRope = False
-                else:
-                    for rope in rope_collisions:
-                        self.onRope = rope
-                        self.vector.y = 0
-                        
-                pressed_keys = pygame.key.get_pressed()
-                if pressed_keys[K_UP]:
-                    if self.onRope:
-                        self.move(0, -4)
-                    elif self.onGround:
-                        self.move(0, -14)
-                        self.onGround = False
-                if pressed_keys[K_DOWN]:
-                    if self.onRope:
-                        self.move(0,4)
-                if pressed_keys[K_LEFT]:
-                    self.move(-self.speed, 0)
-                    if self.onRope:
-                        self.onRope.move(-self.speed, 0)
-                if pressed_keys[K_RIGHT]:
-                    self.move(self.speed, 0)
-                    if self.onRope:
-                        self.onRope.move(self.speed, 0)
-                if pressed_keys[K_SPACE]:
-                    self.shoot()
-                    print(self.velocity)             
- 
-
-        else:
-            self.right[0] += offset_x
-            self.left[0] += offset_x
-            self.right[1] += offset_y
-            self.left[1] += offset_y
-            if self.rect.right > self.right[0]:
-                self.speed *= -1
-            if self.rect.right < self.left[0]:
-                self.speed *= -1
-            self.move(self.speed, 0)
-
-
-        if self.hp != self.max_hp:
-            self.hp_bar()
-            if self.hp < 0:
-                self.kill()
-            
-        self.moving()
-
     def shoot(self):
         if self.gun_ready:
             if self.direction == "right":
@@ -372,17 +317,70 @@ class Creature(Gravity_thing):
             pygame.time.set_timer(RELOAD, 700)
 
 
+
 class Player(Creature):
     def __init__(self):
-        super().__init__([SCREEN_WIDTH//2, SCREEN_HEIGHT//2], 8, 100)
+        super().__init__([SCREEN_WIDTH//2, SCREEN_HEIGHT//2], 8, 100, False)
         self.coins = 0
         self.onRope = False
         self.hooked = [False, 0, 0]
+        self.player_image = pygame.image.load(r'character.png')
 
     def end_hook(self):
         self.hooked = [False, 0, 0]
         self.freefall = True
         self.vector.y *= 1.3
+
+    
+    def update(self):
+        coin_collisions = pygame.sprite.spritecollide(self, coins, False)
+        for coin in coin_collisions:
+            self.coins += 1
+            coin.kill()
+
+        if not self.freefall: self.vector.x = 0               
+
+        if not self.hooked[0] and not self.freefall:
+            rope_collisions = pygame.sprite.spritecollide(self, nodes, False)
+            if not rope_collisions:
+                self.onRope = False
+            else:
+                for rope in rope_collisions:
+                    self.onRope = rope
+                    self.vector.y = 0
+                    
+            pressed_keys = pygame.key.get_pressed()
+            if pressed_keys[K_UP]:
+                if self.onRope:
+                    self.move(0, -4)
+                elif self.onGround:
+                    self.move(0, -14)
+                    self.onGround = False
+            if pressed_keys[K_DOWN]:
+                if self.onRope:
+                    self.move(0,4)
+            if pressed_keys[K_LEFT]:
+                self.move(-self.speed, 0)
+                if self.onRope:
+                    self.onRope.move(-self.speed, 0)
+            if pressed_keys[K_RIGHT]:
+                self.move(self.speed, 0)
+                if self.onRope:
+                    self.onRope.move(self.speed, 0)
+            if pressed_keys[K_SPACE]:
+                self.shoot()
+
+        if self.hp != self.max_hp:
+            self.hp_bar()
+            if self.hp < 0:
+                self.kill()
+            
+        self.moving()
+
+
+        if self.direction == "left":
+            screen.blit(self.player_image, (SCREEN_WIDTH//2, SCREEN_HEIGHT//2 - 30))
+        else: screen.blit(pygame.transform.flip(self.player_image, True, False), (SCREEN_WIDTH//2, SCREEN_HEIGHT//2 - 30))
 
 
 class Coin(Gravity_thing):
@@ -433,6 +431,23 @@ class Soldier(Creature):
         self.left = position
         self.right = path
 
+    def update(self):
+        self.right[0] += offset_x
+        self.left[0] += offset_x
+        self.right[1] += offset_y
+        self.left[1] += offset_y
+        if self.rect.right > self.right[0]:
+            self.speed *= -1
+        if self.rect.right < self.left[0]:
+            self.speed *= -1
+        self.move(self.speed, 0)
+
+        if self.hp != self.max_hp:
+            self.hp_bar()
+            if self.hp < 0:
+                self.kill()
+            
+        self.moving()
 
 class Node(Gravity_thing):
     def __init__(self, position, rope):
@@ -544,7 +559,7 @@ class Bullet(pygame.sprite.Sprite):
         if pygame.sprite.spritecollideany(self, boxes):
             self.velocity = 0.01
             
-cloud_image = pygame.image.load(r'C:/Users/danka/Desktop/Peter/Python/materials/python-sockets-tutorial/mike_cloud.png')
+cloud_image = pygame.image.load(r'mike_cloud.png')
 
 class Cloud(pygame.sprite.Sprite):
     def __init__(self):
@@ -659,6 +674,8 @@ while running:
     clouds.update(offset_x, offset_y)
     bullets.update()
     water.update()
+
+
     for entity in all_sprites:
         if entity not in clouds:
             if entity != player:
