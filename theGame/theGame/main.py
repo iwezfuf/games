@@ -11,6 +11,7 @@ from pygame.locals import (
     K_RIGHT,
     K_ESCAPE,
     KEYDOWN,
+    K_g,
     QUIT,
     K_SPACE)
 
@@ -22,6 +23,7 @@ SCREEN_HEIGHT = 640
 TILE_SIZE = 32
 screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT))
 gravity = pygame.Vector2((0, 0.5))
+gravity_direction = gravity[1]/abs(gravity[1])
 buoyancy = pygame.Vector2((0, -0.55))
 
 level = (
@@ -101,7 +103,7 @@ class Water(pygame.sprite.Sprite):
         water.add(self)
 
     def update(self):
-        potential_spots = ((0, 1), (1, 1), (-1, 1))
+        potential_spots = ((0, 1*gravity_direction), (1, 1*gravity_direction), (-1, 1*gravity_direction))
         for spot in potential_spots:
             new_spot = (self.rect.center[0]+spot[0]*TILE_SIZE, self.rect.center[1]+spot[1]*TILE_SIZE)
             if not any(wall.rect.collidepoint(new_spot) for wall in walls) and not any(water_block.rect.collidepoint(new_spot) for water_block in water):
@@ -149,7 +151,7 @@ class Gravity_thing(pygame.sprite.Sprite):
                 self.vector.y = 40
 
     def buoyancy(self):
-        self.vector += buoyancy
+        self.vector += buoyancy*gravity_direction
         if self.vector.y > 30:
             self.vector.y = 30
 
@@ -254,9 +256,12 @@ class Gravity_thing(pygame.sprite.Sprite):
             if block != self:
                 if self.vector.y > 0:
                     self.rect.bottom = block.rect.top
-                    self.onGround = True
+                    if gravity_direction == 1:
+                        self.onGround = True
                 elif self.vector.y < 0:
                     self.rect.top = block.rect.bottom
+                    if gravity_direction == -1:
+                        self.onGround = True
                 self.vector.y = 0
 
         box_hit_list = pygame.sprite.spritecollide(self, boxes, False)
@@ -264,10 +269,13 @@ class Gravity_thing(pygame.sprite.Sprite):
             if box != self:
                 if self.vector.y > 0:
                     self.rect.bottom = box.rect.top
-                    self.onGround = True
+                    if gravity_direction == 1:
+                        self.onGround = True
                     #box.move(0, box.speed)
                 elif self.vector.y < 0:
                     self.rect.top = box.rect.bottom
+                    if gravity_direction == -1:
+                        self.onGround = True
                     #box.move(0, -box.speed)
                 self.vector.y = 0
 
@@ -355,7 +363,7 @@ class Player(Creature):
                 if self.onRope:
                     self.move(0, -4)
                 elif self.onGround:
-                    self.move(0, -14)
+                    self.move(0, -14*gravity_direction)
                     self.onGround = False
             if pressed_keys[K_DOWN]:
                 if self.onRope:
@@ -565,7 +573,7 @@ class Hook(pygame.sprite.Sprite):
                 pygame.display.flip()
                 break
 
-        if i < 100:
+        if i < 100 and y < who.rect.y:
             node = Node([x,y], self)
             node.stick([x,y])
             self.node = node
@@ -695,6 +703,9 @@ while running:
             if event.key == K_ESCAPE:
                 running = False
                 pygame.display.quit()
+            if event.key == K_g:
+                gravity = pygame.Vector2((0, 0.5*-gravity_direction))
+                gravity_direction = gravity[1]/abs(gravity[1])
         elif event.type == QUIT:
             running = False
             pygame.display.quit()
