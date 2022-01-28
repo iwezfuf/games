@@ -143,10 +143,8 @@ class Gravity_thing(pygame.sprite.Sprite):
 
     def gravity(self):
         if not self.onRope:
-            if self == player and self.hooked[0]:
-                pass
-                #print(self.vector, self.vector + gravity*self.weight)
-            self.vector += gravity*self.weight
+            if self != player or not self.hooked[0]:
+                self.vector += gravity*self.weight
             if self.vector.y > 40:
                 self.vector.y = 40
 
@@ -192,6 +190,11 @@ class Gravity_thing(pygame.sprite.Sprite):
         
             
     def moving(self):
+        if self.vector.x > 0:
+            self.direction = "right"
+        if self.vector.x < 0:
+            self.direction = "left"
+
         self.velocity = self.vector.magnitude()
         if isinstance(self, Node):
             if self.sticked:
@@ -208,9 +211,11 @@ class Gravity_thing(pygame.sprite.Sprite):
             self.buoyancy()
         else: 
             self.inWater = False
-            self.gravity()
+            if self != player or not self.hooked[0]:
+                self.gravity()
 
-        self.friction()
+        if self != player or not self.hooked[0]:
+            self.friction()
         self.onGround = False
         
         self.rect.move_ip(self.vector.x, 0)
@@ -325,7 +330,7 @@ class Player(Creature):
     def end_hook(self):
         self.hooked = [False, 0, 0, 0]
         self.freefall = True
-        self.vector.y *= 1.3
+        self.vector.y *= 1.5
 
     
     def update(self):
@@ -377,30 +382,8 @@ class Player(Creature):
                 x,y = self.hooked[0].rect.center
                 pygame.draw.line(screen, [0,0,0], [player.rect.center[0], player.rect.center[1]],[x,y])
 
-                #self.hooked[2] *= 0.99 toto
-
-                self.hooked[2] *= 1.01
- 
                 vector_to_me = (x - self.rect.center[0], y - self.rect.center[1])
-                
-                #if vector_to_me[1] < -150:
-                #    print(vector_to_me[1])
-                #print(self.vector.magnitude())
-                '''
-                if vector_to_me[1] < 100:
-                    if abs(vector_to_me[1]) * self.vector.magnitude() < 150:
 
-                        if self.hooked[3] == "right":
-                            self.hooked[3] = "left"
-                        else: self.hooked[3] = "right"
-                '''
-                ''' toto
-                if self.hooked[2] < 1:
-                    #print(self.hooked[2])
-                    if self.hooked[3] == "right":
-                            self.hooked[3] = "left"
-                    else: self.hooked[3] = "right"
-                '''
                 if abs(vector_to_me[1]) < 40:
                     self.end_hook()
                 else:
@@ -416,9 +399,24 @@ class Player(Creature):
 
                     self.vector.x = perp_vector[0]*k*multiply
                     self.vector.y = perp_vector[1]*k*multiply
+
+                    if (self.hooked[3] == "right" and x < self.rect.center[0]) or (self.hooked[3] == "left" and x > self.rect.center[0]):
+
+                            self.hooked[2] *= 0.99 - 0.07*self.hooked[4]
+
+                            mag = self.vector.magnitude()
+
+                            if abs(mag*((y - self.rect.center[1])/self.hooked[1])) < 0.8:
+                                self.hooked[2] *= 2.5
+                                self.hooked[4] += 1
+                                if abs(x-self.rect.center[0]) < 8:
+                                    self.hooked[2] = 0
+                                elif self.hooked[3] == "right":
+                                    self.hooked[3] = "left"
+                                else: self.hooked[3] = "right"
                     
-                    #self.rect.move_ip(perp_vector[0]*k*multiply, perp_vector[1]*k*multiply)
-                
+                    else: self.hooked[2] *= 1.03
+
 
         self.moving()
 
@@ -581,7 +579,7 @@ class Hook(pygame.sprite.Sprite):
             else: direction = "left"
 
             if dist > 100:
-                player.hooked = [self.node, dist, who.velocity, direction]
+                player.hooked = [self.node, dist, who.velocity*1.35, direction, 1]
         
                 
 
