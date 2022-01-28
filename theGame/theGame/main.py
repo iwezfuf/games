@@ -67,13 +67,28 @@ class Sign(pygame.sprite.Sprite):
 
 
 class Wall(pygame.sprite.Sprite):
-    def __init__(self, center, color, *groups):
+    def __init__(self, center, color):
         super(Wall, self).__init__()
         self.surf = pygame.Surface([TILE_SIZE, TILE_SIZE])
         self.surf.fill(color)
         self.rect = self.surf.get_rect(bottomleft=center)
-        for group in groups:
-            group.add(self)
+        all_sprites.add(self)
+        walls.add(self)
+
+spike_image = pygame.image.load(r'spike.png')
+
+class Spike(pygame.sprite.Sprite):
+    def __init__(self, position):
+        super(Spike, self).__init__()
+        self.surf = pygame.Surface([TILE_SIZE, TILE_SIZE])
+        self.surf.set_alpha(0)
+        self.rect = self.surf.get_rect(bottomleft=position)
+        spikes.add(self)
+        all_sprites.add(self)
+    
+    def update(self):
+        screen.blit(spike_image, (self.rect.center[0]-15, self.rect.center[1]-15))
+
 
 class Water(pygame.sprite.Sprite):
     def __init__(self, position):
@@ -101,7 +116,6 @@ class Gravity_thing(pygame.sprite.Sprite):
         if noImage:
             self.surf.fill([50,50,50])
         else: 
-            self.surf.fill([0,0,0])
             self.surf.set_alpha(0)
         self.rect = self.surf.get_rect(bottomleft=position)
         self.position = position
@@ -129,6 +143,9 @@ class Gravity_thing(pygame.sprite.Sprite):
 
     def gravity(self):
         if not self.onRope:
+            if self == player and self.hooked[0]:
+                pass
+                #print(self.vector, self.vector + gravity*self.weight)
             self.vector += gravity*self.weight
             if self.vector.y > 40:
                 self.vector.y = 40
@@ -160,8 +177,20 @@ class Gravity_thing(pygame.sprite.Sprite):
             self.vector -= friction_x
         if self.vector.x < 0:
             self.vector += friction_x
-                
 
+
+    def hp_change(self, hp):
+        self.hp += hp
+        if self.hp < 0:
+            if self in boxes:
+                for i in range(5):
+                    coin = Coin(list(self.rect.midbottom))
+                    self.kill()
+                    coin.vector.y -= 7
+                    coin.vector.x += random.choice((-2,2,2.5,-2.5,1,-1,1.5,-1.5, 1.2,-1.2,2.2,-2.2))
+            self.kill()
+        
+            
     def moving(self):
         self.velocity = self.vector.magnitude()
         if isinstance(self, Node):
@@ -183,32 +212,6 @@ class Gravity_thing(pygame.sprite.Sprite):
 
         self.friction()
         self.onGround = False
-
-
-        if self == player:
-            if self.hooked[0]:
-                self.vector.x = 0; self.vector.y = 0
-
-                x,y = self.hooked[0].rect.center
-                pygame.draw.line(screen, [0,0,0], [player.rect.center[0], player.rect.center[1]],[x,y])
-
-                if self.direction == "right":
-                    multiply = 1
-                else: multiply = -1
-
-                self.hooked[2] *= 1.01
-
-                vector_to_me = (x - self.rect.center[0], y - self.rect.center[1])
-
-                if abs(vector_to_me[1]) < 40:
-                    self.end_hook()
-
-                perp_vector = (1, -vector_to_me[0]/vector_to_me[1])
-                k = self.hooked[2]/(abs(perp_vector[0]) + abs(perp_vector[1]))
-                
-                self.vector.x = perp_vector[0]*k*multiply
-                self.vector.y = perp_vector[1]*k*multiply
-
         
         self.rect.move_ip(self.vector.x, 0)
         
@@ -280,18 +283,11 @@ class Gravity_thing(pygame.sprite.Sprite):
             if spikess or box_hit_list or block_hit_list:
                 self.end_hook()
 
-
-    def hp_change(self, hp):
-        self.hp += hp
-        if self.hp < 0:
-            if self in boxes:
-                for i in range(5):
-                    coin = Coin(list(self.rect.midbottom))
-                    self.kill()
-                    coin.vector.y -= 7
-                    coin.vector.x += random.choice((-2,2,2.5,-2.5,1,-1,1.5,-1.5, 1.2,-1.2,2.2,-2.2))
-            self.kill()
         
+        if pygame.sprite.spritecollideany(self, bullets):
+            self.hp_change(-20)
+
+
             
 class Creature(Gravity_thing):
     def __init__(self, position, speed, max_hp, noImage=True):
@@ -323,11 +319,11 @@ class Player(Creature):
         super().__init__([SCREEN_WIDTH//2, SCREEN_HEIGHT//2], 8, 100, False)
         self.coins = 0
         self.onRope = False
-        self.hooked = [False, 0, 0]
+        self.hooked = [False, 0, 0, 0]
         self.player_image = pygame.image.load(r'character.png')
 
     def end_hook(self):
-        self.hooked = [False, 0, 0]
+        self.hooked = [False, 0, 0, 0]
         self.freefall = True
         self.vector.y *= 1.3
 
@@ -374,7 +370,56 @@ class Player(Creature):
             self.hp_bar()
             if self.hp < 0:
                 self.kill()
-            
+
+
+        if self.hooked[0]:
+
+                x,y = self.hooked[0].rect.center
+                pygame.draw.line(screen, [0,0,0], [player.rect.center[0], player.rect.center[1]],[x,y])
+
+                #self.hooked[2] *= 0.99 toto
+
+                self.hooked[2] *= 1.01
+ 
+                vector_to_me = (x - self.rect.center[0], y - self.rect.center[1])
+                
+                #if vector_to_me[1] < -150:
+                #    print(vector_to_me[1])
+                #print(self.vector.magnitude())
+                '''
+                if vector_to_me[1] < 100:
+                    if abs(vector_to_me[1]) * self.vector.magnitude() < 150:
+
+                        if self.hooked[3] == "right":
+                            self.hooked[3] = "left"
+                        else: self.hooked[3] = "right"
+                '''
+                ''' toto
+                if self.hooked[2] < 1:
+                    #print(self.hooked[2])
+                    if self.hooked[3] == "right":
+                            self.hooked[3] = "left"
+                    else: self.hooked[3] = "right"
+                '''
+                if abs(vector_to_me[1]) < 40:
+                    self.end_hook()
+                else:
+                    self.vector.x = 0; self.vector.y = 0
+
+                    perp_vector = (1, -vector_to_me[0]/vector_to_me[1])
+
+                    k = self.hooked[2]/(abs(perp_vector[0]) + abs(perp_vector[1]))
+                    
+                    if self.hooked[3] == "right":
+                        multiply = 1
+                    else: multiply = -1
+
+                    self.vector.x = perp_vector[0]*k*multiply
+                    self.vector.y = perp_vector[1]*k*multiply
+                    
+                    #self.rect.move_ip(perp_vector[0]*k*multiply, perp_vector[1]*k*multiply)
+                
+
         self.moving()
 
 
@@ -531,8 +576,12 @@ class Hook(pygame.sprite.Sprite):
             dist_y = abs(y - player.rect.center[1])
             dist = (dist_x**2+dist_y**2)**0.5
 
+            if x > who.rect.center[0]:
+                direction = "right"
+            else: direction = "left"
+
             if dist > 100:
-                player.hooked = [self.node, dist, who.velocity]
+                player.hooked = [self.node, dist, who.velocity, direction]
         
                 
 
@@ -564,15 +613,15 @@ cloud_image = pygame.image.load(r'mike_cloud.png')
 class Cloud(pygame.sprite.Sprite):
     def __init__(self):
         super(Cloud, self).__init__()
-        self.x = random.randint(SCREEN_WIDTH + 20, SCREEN_WIDTH + 100)
-        self.y = random.randint(0, SCREEN_HEIGHT)
+        self.surf = pygame.Surface([80,50])
+        self.surf.fill([200,200,200])
+        self.rect = self.surf.get_rect(center=(random.randint(SCREEN_WIDTH + 20, SCREEN_WIDTH + 100),random.randint(0, SCREEN_HEIGHT),))
+        self.surf.set_alpha(0)
         
-
-    def update(self, offset_x, offset_y):
-        screen.blit(cloud_image, (self.x, self.y))
-        self.x -= 5 - offset_x
-        self.y += offset_y
-        if self.x < 0:
+    def update(self):
+        self.rect.move_ip(-5, 0)
+        screen.blit(cloud_image, (self.rect.center))
+        if self.rect.x < 0:
             self.kill()
 
 class Camera():
@@ -617,9 +666,9 @@ x = y = 0
 for row in level:
     for col in row:
         if col == "P":
-            platform = Wall([x,y], [200,200,200], walls, all_sprites)
+            platform = Wall([x,y], [200,200,200])
         if col == "S":
-            platform = Wall([x,y], [100,100,100], all_sprites, spikes)
+            spike = Spike([x,y])
         if col == "B":
             box = Box([x,y], [100, 100, 100], 70, 3)
         try: soldier = Soldier([x,y], [x+int(col)*TILE_SIZE, y])
@@ -641,9 +690,8 @@ clock = pygame.time.Clock()
 
 running = True
 target = player
-i = -1
+
 while running:
-    i += 1
     for event in pygame.event.get():
         if event.type == KEYDOWN:
             if event.key == K_ESCAPE:
@@ -671,20 +719,21 @@ while running:
 
     screen.fill((135, 206, 250))
     offset_x, offset_y = camera.update(target)
-    clouds.update(offset_x, offset_y)
     bullets.update()
     water.update()
 
 
     for entity in all_sprites:
-        if entity not in clouds:
-            if entity != player:
-                entity.rect.move_ip(offset_x, offset_y)
+        if entity != player:
+            entity.rect.move_ip(offset_x, offset_y)
+            
+        if entity not in spikes and entity != player and entity not in clouds:
             screen.blit(entity.surf, entity.rect)
+
+    clouds.update()
+    spikes.update()
     
     for gravity_thing in gravity_things:
-        if pygame.sprite.spritecollideany(gravity_thing, bullets):
-            gravity_thing.hp_change(-20)
         if gravity_thing != player:
             gravity_thing.update()
 
