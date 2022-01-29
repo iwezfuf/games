@@ -423,7 +423,7 @@ class Player(Creature):
                                     self.hooked[3] = "left"
                                 else: self.hooked[3] = "right"
                     
-                    else: self.hooked[2] *= 1.03
+                    else: self.hooked[2] *= 1.06
 
 
         self.moving()
@@ -615,6 +615,8 @@ class Bullet(pygame.sprite.Sprite):
             self.velocity = 0.01
             
 cloud_image = pygame.image.load(r'mike_cloud.png')
+cloud_image = pygame.transform.scale(cloud_image, (40,25))
+cloud_image = pygame.transform.rotate(cloud_image, 45)
 
 class Cloud(pygame.sprite.Sprite):
     def __init__(self):
