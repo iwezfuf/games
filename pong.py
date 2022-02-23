@@ -43,11 +43,12 @@ class Ball(pygame.sprite.Sprite):
         if self.rect.right < 0 or self.rect.left > SCREEN_WIDTH:
             if self.rect.left > SCREEN_WIDTH:
                 player1.score += 1
-                ball = Ball([-5,5])
+                self.rect = self.surf.get_rect(center=[SCREEN_WIDTH//2,SCREEN_HEIGHT//2])
+                self.vector = [-10,10]
             else:
                 player2.score += 1
-                ball = Ball([5,5])
-            self.kill()
+                self.rect = self.surf.get_rect(center=[SCREEN_WIDTH//2,SCREEN_HEIGHT//2])
+                self.vector = [-10,10]
             player1.rect.center = [SCREEN_WIDTH-10, SCREEN_HEIGHT//2-25]
             player2.rect.center = [10,SCREEN_HEIGHT//2-25]
             
@@ -62,16 +63,18 @@ class Player(pygame.sprite.Sprite):
         self.rect = self.surf.get_rect(center=position)
         self.position = position
         self.keys = keys
-        self.speed = 6
+        self.speed = 8
         self.score = 0 
         players.add(self)
 
     def update(self, type):
         if type == 1 and self == player2:
-            if ball.rect.center[1] > self.rect.center[1]:
-                self.rect.move_ip(0, self.speed)
-            elif ball.rect.center[1] < self.rect.center[1]:
-                self.rect.move_ip(0, -self.speed)
+            speed = abs(ball.vector[1])
+            if ball.rect.center[1] > self.rect.center[1] + 8:
+                self.rect.move_ip(0, min(speed, self.speed))
+            elif ball.rect.center[1] < self.rect.center[1] - 8:
+                self.rect.move_ip(0, -min(speed, self.speed))
+
         else: 
             pressed_keys = pygame.key.get_pressed()
             if pressed_keys[self.keys[0]]:
@@ -86,7 +89,7 @@ class Player(pygame.sprite.Sprite):
         
 
 balls = pygame.sprite.Group()
-ball = Ball([5,5])
+ball = Ball([3,3])
 players = pygame.sprite.Group()
 player1 = Player([SCREEN_WIDTH-10, SCREEN_HEIGHT//2-25], [K_UP, K_DOWN])
 player2 = Player([10,SCREEN_HEIGHT//2-25], [K_w, K_s])
@@ -118,7 +121,7 @@ class Game():
                         self.cooldownScreen(5000)
                     elif pos[0] in range(SCREEN_WIDTH//2+70, SCREEN_WIDTH//2+220)  and pos[1] in range(SCREEN_HEIGHT//2-40, SCREEN_HEIGHT//2+40):
                         self.type = 1
-                        self.cooldownScreen(1)
+                        self.cooldownScreen(3000)
                 if event.type == QUIT:
                     self.running = False
                     pygame.display.quit()
