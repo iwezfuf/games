@@ -31,7 +31,7 @@ class Ball(pygame.sprite.Sprite):
             player = pygame.sprite.spritecollide(self, players, False)[0]
             dist = player.rect.center[1] - self.rect.center[1]
             angle = abs(dist*9.9/player.rect.height)
-            z0 = 100-angle**2
+            z0 = 250-angle**2
             z = float(str(z0**0.5)[:4])
             if angle < 0:
                 angle *= -1
@@ -44,26 +44,26 @@ class Ball(pygame.sprite.Sprite):
             if self.rect.left > SCREEN_WIDTH:
                 player1.score += 1
                 self.rect = self.surf.get_rect(center=[SCREEN_WIDTH//2,SCREEN_HEIGHT//2])
-                self.vector = [-10,10]
+                self.vector = [10,2]
             else:
                 player2.score += 1
                 self.rect = self.surf.get_rect(center=[SCREEN_WIDTH//2,SCREEN_HEIGHT//2])
-                self.vector = [-10,10]
-            player1.rect.center = [SCREEN_WIDTH-10, SCREEN_HEIGHT//2-25]
-            player2.rect.center = [10,SCREEN_HEIGHT//2-25]
+                self.vector = [-10,2]
+            player1.rect.center = player1.position
+            player2.rect.center = player2.position
             
 
 
 class Player(pygame.sprite.Sprite):
-    def __init__(self, position, keys):
+    def __init__(self, position, keys, speed):
         super(Player, self).__init__()
         self.vector = [0,0]
-        self.surf = pygame.Surface([20,100])
+        self.surf = pygame.Surface([70,100])
         self.surf.fill([255,255,255])
         self.rect = self.surf.get_rect(center=position)
         self.position = position
         self.keys = keys
-        self.speed = 8
+        self.speed = speed
         self.score = 0 
         players.add(self)
 
@@ -89,10 +89,10 @@ class Player(pygame.sprite.Sprite):
         
 
 balls = pygame.sprite.Group()
-ball = Ball([3,3])
+ball = Ball([10,2])
 players = pygame.sprite.Group()
-player1 = Player([SCREEN_WIDTH-10, SCREEN_HEIGHT//2-25], [K_UP, K_DOWN])
-player2 = Player([10,SCREEN_HEIGHT//2-25], [K_w, K_s])
+player1 = Player([SCREEN_WIDTH+15, SCREEN_HEIGHT//2-25], [K_UP, K_DOWN], 8)
+player2 = Player([-15,SCREEN_HEIGHT//2-25], [K_w, K_s], 6)
 clock = pygame.time.Clock()
 
 
@@ -118,10 +118,12 @@ class Game():
                     pos = pygame.mouse.get_pos()
                     if pos[0] in range(SCREEN_WIDTH//2-180, SCREEN_WIDTH//2-30) and pos[1] in range(SCREEN_HEIGHT//2-40, SCREEN_HEIGHT//2+40):
                         self.type = 2
+                        player2.speed = 8
                         self.cooldownScreen(5000)
                     elif pos[0] in range(SCREEN_WIDTH//2+70, SCREEN_WIDTH//2+220)  and pos[1] in range(SCREEN_HEIGHT//2-40, SCREEN_HEIGHT//2+40):
                         self.type = 1
-                        self.cooldownScreen(3000)
+                        player2.speed = 6
+                        self.cooldownScreen(2)
                 if event.type == QUIT:
                     self.running = False
                     pygame.display.quit()
