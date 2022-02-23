@@ -1,5 +1,4 @@
-import math
-import time
+import random
 import pygame
 import pygame.freetype
 from pygame.locals import (
@@ -30,25 +29,23 @@ class Ball(pygame.sprite.Sprite):
         if pygame.sprite.spritecollideany(self, players):
             player = pygame.sprite.spritecollide(self, players, False)[0]
             dist = player.rect.center[1] - self.rect.center[1]
-            angle = abs(dist*9.9/player.rect.height)
+            angle = dist*10/player.rect.height
             z0 = 250-angle**2
             z = float(str(z0**0.5)[:4])
-            if angle < 0:
-                angle *= -1
             self.vector = [z, angle]
             if player == player1:
                 self.vector[0] *= -1
-
+            
 
         if self.rect.right < 0 or self.rect.left > SCREEN_WIDTH:
             if self.rect.left > SCREEN_WIDTH:
                 player1.score += 1
                 self.rect = self.surf.get_rect(center=[SCREEN_WIDTH//2,SCREEN_HEIGHT//2])
-                self.vector = [10,2]
+                self.vector = [5,2]
             else:
                 player2.score += 1
                 self.rect = self.surf.get_rect(center=[SCREEN_WIDTH//2,SCREEN_HEIGHT//2])
-                self.vector = [-10,2]
+                self.vector = [-5,2]
             player1.rect.center = player1.position
             player2.rect.center = player2.position
             
@@ -69,7 +66,7 @@ class Player(pygame.sprite.Sprite):
 
     def update(self, type):
         if type == 1 and self == player2:
-            speed = abs(ball.vector[1])
+            speed = abs(ball.vector[1])*1+0.1**18*random.randrange(0, 10)
             if ball.rect.center[1] > self.rect.center[1] + 8:
                 self.rect.move_ip(0, min(speed, self.speed))
             elif ball.rect.center[1] < self.rect.center[1] - 8:
@@ -82,14 +79,14 @@ class Player(pygame.sprite.Sprite):
             if pressed_keys[self.keys[1]]:
                 self.rect.move_ip(0, self.speed)
                 
-            if self.rect.top < 0:
-                self.rect.top = 0
-            if self.rect.bottom > SCREEN_HEIGHT:
-                self.rect.bottom = SCREEN_HEIGHT
+        if self.rect.top < 0:
+            self.rect.top = 0
+        if self.rect.bottom > SCREEN_HEIGHT:
+            self.rect.bottom = SCREEN_HEIGHT
         
 
 balls = pygame.sprite.Group()
-ball = Ball([10,2])
+ball = Ball([5,2])
 players = pygame.sprite.Group()
 player1 = Player([SCREEN_WIDTH+15, SCREEN_HEIGHT//2-25], [K_UP, K_DOWN], 8)
 player2 = Player([-15,SCREEN_HEIGHT//2-25], [K_w, K_s], 6)
@@ -123,7 +120,7 @@ class Game():
                     elif pos[0] in range(SCREEN_WIDTH//2+70, SCREEN_WIDTH//2+220)  and pos[1] in range(SCREEN_HEIGHT//2-40, SCREEN_HEIGHT//2+40):
                         self.type = 1
                         player2.speed = 6
-                        self.cooldownScreen(2)
+                        self.cooldownScreen(3000)
                 if event.type == QUIT:
                     self.running = False
                     pygame.display.quit()
