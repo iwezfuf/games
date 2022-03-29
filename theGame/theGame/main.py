@@ -1,4 +1,5 @@
-import math
+from lib2to3.pygram import python_grammar_no_print_statement
+from pygame.locals import *
 import random
 import os
 import sys
@@ -22,6 +23,14 @@ SCREEN_WIDTH = 800
 SCREEN_HEIGHT = 640
 TILE_SIZE = 32
 screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT))
+class Screen(pygame.sprite.Sprite):
+    def __init__(self, width, height):
+        self.surf = pygame.Surface([width, height])
+        self.surf.set_alpha(50)
+        self.surf.fill((0,0,0))
+        self.rect = self.surf.get_rect(topleft=(0,0))
+screeen = Screen(SCREEN_WIDTH, SCREEN_HEIGHT)
+
 gravity = pygame.Vector2((0, 0.5))
 gravity_direction = gravity[1]/abs(gravity[1])
 buoyancy = pygame.Vector2((0, -0.55))
@@ -56,6 +65,12 @@ level = (
         "PPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPP")
 
 
+def is_on_screen(object):
+    #if object.rect.left > -32 and object.rect.right < SCREEN_WIDTH+32 and object.rect.top > -32 and object.rect.bottom < SCREEN_HEIGHT+32:
+    if pygame.sprite.collide_rect(screeen, object):
+        return True
+    return False
+
 class Sign(pygame.sprite.Sprite):
     def __init__(self, position, text, size, color):
         super(Sign, self).__init__()
@@ -89,11 +104,29 @@ class Spike(pygame.sprite.Sprite):
         all_sprites.add(self)
     
     def update(self):
-        screen.blit(spike_image, (self.rect.center[0]-15, self.rect.center[1]-15))
+        if is_on_screen(self):
+            screen.blit(spike_image, (self.rect.center[0]-15, self.rect.center[1]-15))
+
+
+def update_water(water_update_dict):
+    for water_block in water_update_dict.keys():
+        if is_on_screen(water_block):
+            if water_update_dict[water_block]:
+                if water_block.update():
+                    for water_block in water_update_dict.keys():
+                        water_update_dict[water_block] = True
+            try:
+                #if (water_block.rect.center[0] + TILE_SIZE, water_block.rect.center[1] + TILE_SIZE) in water_positions and (water_block.rect.center[0], water_block.rect.center[1] + TILE_SIZE) in water_positions and (water_block.rect.center[0] - TILE_SIZE, water_block.rect.center[1] + TILE_SIZE) in water_positions:
+                if (water_block.rect.center[0], water_block.rect.center[1] + TILE_SIZE) in water_positions:
+                    water_update_dict[water_block] = False
+            except:
+                water_update_dict[water_block] = True
+    return water_update_dict
 
 
 class Water(pygame.sprite.Sprite):
     def __init__(self, position):
+        global positions
         super(Water, self).__init__()
         self.surf = pygame.Surface([TILE_SIZE, TILE_SIZE])
         self.surf.fill([0,0,255])
@@ -101,13 +134,16 @@ class Water(pygame.sprite.Sprite):
         self.rect = self.surf.get_rect(bottomleft=position)
         all_sprites.add(self)
         water.add(self)
+        water_update_dict[self] = True
+        water_positions.append(self.rect.center)
 
     def update(self):
-        potential_spots = ((0, 1*gravity_direction), (1, 1*gravity_direction), (-1, 1*gravity_direction))
-        for spot in potential_spots:
-            new_spot = (self.rect.center[0]+spot[0]*TILE_SIZE, self.rect.center[1]+spot[1]*TILE_SIZE)
-            if not any(wall.rect.collidepoint(new_spot) for wall in walls) and not any(water_block.rect.collidepoint(new_spot) for water_block in water):
-                self.rect.move_ip(spot[0]*TILE_SIZE, spot[1]*TILE_SIZE)
+            potential_spots = ((0, 1*gravity_direction), (1, 1*gravity_direction), (-1, 1*gravity_direction))
+            for spot in potential_spots:
+                new_spot = (self.rect.center[0]+spot[0]*TILE_SIZE, self.rect.center[1]+spot[1]*TILE_SIZE)
+                if not any(wall.rect.collidepoint(new_spot) for wall in walls) and not any(water_block.rect.collidepoint(new_spot) for water_block in water):
+                    self.rect.move_ip(spot[0]*TILE_SIZE, spot[1]*TILE_SIZE)
+                    return True
                 
         
 
@@ -185,10 +221,10 @@ class Gravity_thing(pygame.sprite.Sprite):
             if self in boxes:
                 for i in range(5):
                     coin = Coin(list(self.rect.midbottom))
-                    self.kill()
                     coin.vector.y -= 7
                     coin.vector.x += random.choice((-2,2,2.5,-2.5,1,-1,1.5,-1.5, 1.2,-1.2,2.2,-2.2))
             self.kill()
+            del(self)
         
             
     def moving(self):
@@ -346,6 +382,8 @@ class Player(Creature):
         for coin in coin_collisions:
             self.coins += 1
             coin.kill()
+            del(coin)
+            return
 
         if not self.freefall: self.vector.x = 0               
 
@@ -383,6 +421,8 @@ class Player(Creature):
             self.hp_bar()
             if self.hp < 0:
                 self.kill()
+                del(self)
+                return
 
 
         if self.hooked[0]:
@@ -497,6 +537,8 @@ class Soldier(Creature):
             self.hp_bar()
             if self.hp < 0:
                 self.kill()
+                del(self)
+                return
             
         self.moving()
 
@@ -609,8 +651,12 @@ class Bullet(pygame.sprite.Sprite):
     
         if self.velocity == 0.01:
             self.kill()
+            del(self)
+            return
         if pygame.sprite.spritecollideany(self, walls):
             self.kill()
+            del(self)
+            return
         if pygame.sprite.spritecollideany(self, boxes):
             self.velocity = 0.01
             
@@ -631,6 +677,7 @@ class Cloud(pygame.sprite.Sprite):
         screen.blit(cloud_image, (self.rect.center))
         if self.rect.x < 0:
             self.kill()
+            del(self)
 
 class Camera():
     def __init__(self):
@@ -669,6 +716,8 @@ nodes = pygame.sprite.Group()
 player = Player()
 coins_sign = Sign([10,10], ['Coins: ', player.coins], 30, [0,0,0])
 rope = Rope([150,50], 8)
+water_update_dict = {}
+water_positions = []
 
 x = y = 0
 for row in level:
@@ -696,7 +745,7 @@ for row in level:
 
 clock = pygame.time.Clock()
 
-running = True
+running = 1
 target = player
 
 while running:
@@ -730,8 +779,10 @@ while running:
 
     screen.fill((135, 206, 250))
     offset_x, offset_y = camera.update(target)
+    screeen.rect.move_ip(offset_x, offset_y)
+    screen.blit(screeen.surf, screeen.rect)
     bullets.update()
-    water.update()
+    water_update_dict = update_water(water_update_dict)
 
 
     for entity in all_sprites:
@@ -750,9 +801,11 @@ while running:
 
             
     coins_sign.kill()
+    del(coins_sign)
     coins_sign = Sign([10,10], ['Coins: ', player.coins], 30, [0,0,0])
     for sign in signs:
         screen.blit(sign.textsurface,sign.position)
+    
         
     pygame.display.flip()
     clock.tick(100)
