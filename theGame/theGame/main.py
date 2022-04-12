@@ -1,5 +1,6 @@
 from pygame.locals import *
 import random
+import time
 import os
 import sys
 import pygame
@@ -40,23 +41,23 @@ level = (
         "PP                                                                                                                            PP",
         "PP                                                                                                                            PP",
         "PP                    PPPPPPPPPPP                                                                                             PP",
-        "PP                                                                                                                            PP",
+        "PP                                WWWWWWWW                                                                                            PP",
         "PP               WWWWWWWWW                                                                                                    PP",
         "PP                WWWWWW                                                                                                      PP",
         "PP      PPP       WWWWW                                                            PPPPPPPPPPPP                               PP",
-        "PP PP P                                                                                                                       PP",
+        "PP PP P                                       WWWWW                                                                                PP",
         "PP                    B     SSSSSSS                                                                                           PP",
         "PP                 PPPPPP                   PPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPP        PPPPPPPPPPPPPPPPP",
-        "PP          1                                                                                                                 PP",
+        "PP          1                            WWW                                                                                     PP",
         "PP         PPPPPPP                                                                                                            PP",
         "PP                      3                                                                                                     PP",
         "PP                     PPPPPP                                                                                                 PP",
         "PP         <B                                                                                                                 PP",
-        "PP   PPPPPPPPPPP                                                                                                              PP",
-        "PP                    >  B                                            PPPPPPPPP                                               PP",
+        "PP   PPPPPPPPPPP                       WWWWWWW       WWWWWWWW                                                                                PP",
+        "PP                    >  B         WWWWWWW                                  PPPPPPPPP                                               PP",
         "PP                 PPPPPPPPPPP  P  WWWWWWW                                                                                    PP",
-        "PP                              P  WWWWWWW                                                                                    PP",
-        "PP                              P  WWWWWWW                                                                                    PP",
+        "PP                              P  WWWWWWWWWWWWWWWW                                                                                    PP",
+        "PP                              P  WWWWWWW                        WWWWW                                                            PP",
         "PP                              P  WWWWWWW                                                                                    PP",
         "PP                              P  WWWWWWW                                                                                    PP",
         "PPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPP",
@@ -104,26 +105,8 @@ class Spike(pygame.sprite.Sprite):
         if is_on_screen(self):
             screen.blit(spike_image, (self.rect.center[0]-15, self.rect.center[1]-15))
 
-
-def update_water(water_update_dict):
-    for water_block in water_update_dict.keys():
-            if water_update_dict[water_block]:
-                if is_on_screen(water_block):
-                    if water_block.update():
-                        for water_block in water_update_dict.keys():
-                            water_update_dict[water_block] = True
-            try:
-                #if (water_block.rect.center[0] + TILE_SIZE, water_block.rect.center[1] + TILE_SIZE) in water_positions and (water_block.rect.center[0], water_block.rect.center[1] + TILE_SIZE) in water_positions and (water_block.rect.center[0] - TILE_SIZE, water_block.rect.center[1] + TILE_SIZE) in water_positions:
-                if (water_block.rect.center[0], water_block.rect.center[1] + TILE_SIZE) in water_positions.values():
-                    water_update_dict[water_block] = False
-            except:
-                water_update_dict[water_block] = True
-    return water_update_dict
-
-
 class Water(pygame.sprite.Sprite):
     def __init__(self, position):
-        global positions
         super(Water, self).__init__()
         self.surf = pygame.Surface([TILE_SIZE, TILE_SIZE])
         self.surf.fill([0,0,255])
@@ -131,19 +114,55 @@ class Water(pygame.sprite.Sprite):
         self.rect = self.surf.get_rect(bottomleft=position)
         all_sprites.add(self)
         water.add(self)
-        water_update_dict[self] = True
-        water_positions[self] = self.rect.center
+        self.water_blocks_above_me = []
+        self.water_blocks_below_me = []
 
-    def update(self):
+    def update(self, forced=False):
+        if is_on_screen(self) or forced:
             potential_spots = ((0, 1*gravity_direction), (1, 1*gravity_direction), (-1, 1*gravity_direction))
             for spot in potential_spots:
                 new_spot = (int(self.rect.center[0]+spot[0]*TILE_SIZE), int(self.rect.center[1]+spot[1]*TILE_SIZE))
-                if not any(wall.rect.collidepoint(new_spot) for wall in walls) and new_spot not in water_positions.values():
-                    #print(new_spot, water_positions.values())
+                if not any(wall.rect.collidepoint(new_spot) for wall in walls) and not any(water_block.rect.collidepoint(new_spot) for water_block in water):
+
+                    self.update_water_blocks_above_and_below_me(True, True)
+
                     self.rect.move_ip(spot[0]*TILE_SIZE, spot[1]*TILE_SIZE)
-                    water_positions[self] = self.rect.center
-                    return True
-                
+                    
+                    for block in self.water_blocks_above_me:
+                        block.update(True)
+                    
+                    self.update_water_blocks_above_and_below_me(True, False)
+                    for block in self.water_blocks_above_me:
+                        block.update(True)
+                    
+                    self.update_water_blocks_above_and_below_me(True, False)
+                    for block in self.water_blocks_above_me:
+                        block.update(True)
+
+                    return
+                        
+        
+
+    def update_water_blocks_above_and_below_me(self, above=True, below=True):
+        # below
+        if below:
+            self.water_blocks_below_me = []
+            potential_spots = ((0, 1*gravity_direction), (1, 1*gravity_direction), (-1, 1*gravity_direction))
+            for spot in potential_spots:
+                new_spot = (int(self.rect.center[0]+spot[0]*TILE_SIZE), int(self.rect.center[1]+spot[1]*TILE_SIZE))
+                for water_block in water:
+                    if water_block.rect.collidepoint(new_spot):
+                        self.water_blocks_below_me.append(water_block)
+
+        # above
+        if above:
+            self.water_blocks_above_me = []
+            potential_spots = ((0, -1*gravity_direction), (1, -1*gravity_direction), (-1, -1*gravity_direction))
+            for spot in potential_spots:
+                new_spot = (int(self.rect.center[0]+spot[0]*TILE_SIZE), int(self.rect.center[1]+spot[1]*TILE_SIZE))
+                for water_block in water:
+                    if water_block.rect.collidepoint(new_spot):
+                        self.water_blocks_above_me.append(water_block)
         
 
 class Gravity_thing(pygame.sprite.Sprite):
@@ -746,6 +765,7 @@ clock = pygame.time.Clock()
 
 running = 1
 target = player
+start_time = time.time()
 
 while running:
     for event in pygame.event.get():
@@ -771,6 +791,20 @@ while running:
                 turret.shoot()
         elif event.type == pygame.MOUSEBUTTONDOWN:
             x,y = pygame.mouse.get_pos()
+            for thing in all_sprites:
+                if thing.rect.collidepoint((x,y)):
+                    try:
+                        thing.update_water_blocks_above_and_below_me(True, True)
+                        
+                        for block in thing.water_blocks_above_me:
+                            block.update(True)
+                        
+                        thing.update_water_blocks_above_and_below_me(True, False)
+                        for block in thing.water_blocks_above_me:
+                            block.update(True)
+
+                    except: pass
+                    thing.kill()
             hook = Hook([x,y], player)
         elif event.type == pygame.MOUSEBUTTONUP:
             player.end_hook()
@@ -780,15 +814,25 @@ while running:
     offset_x, offset_y = camera.update(target)
     screen.blit(screeen.surf, screeen.rect)
     bullets.update()
-    water_update_dict = update_water(water_update_dict)
+    
 
 
     for entity in all_sprites:
         if entity != player:
-            entity.rect.move_ip(offset_x, offset_y)
+            entity.rect.move_ip(offset_x, offset_y) # scrollovanie vsetkeho
             
         if entity not in spikes and entity != player and entity not in clouds:
             screen.blit(entity.surf, entity.rect)
+
+    # Aby sa voda na zaciatku pohla aj ked ju nevidim
+    if time.time() - start_time < 1:
+        for water_block in water:
+            if len(water_block.water_blocks_below_me) == 0:
+                water_block.update(True)
+
+    for water_block in water:
+        if len(water_block.water_blocks_below_me) == 0:
+            water_block.update()
 
     clouds.update()
     spikes.update()
