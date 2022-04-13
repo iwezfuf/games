@@ -1,3 +1,4 @@
+from turtle import up
 from pygame.locals import *
 import random
 import time
@@ -123,22 +124,13 @@ class Water(pygame.sprite.Sprite):
             for spot in potential_spots:
                 new_spot = (int(self.rect.center[0]+spot[0]*TILE_SIZE), int(self.rect.center[1]+spot[1]*TILE_SIZE))
                 if not any(wall.rect.collidepoint(new_spot) for wall in walls) and not any(water_block.rect.collidepoint(new_spot) for water_block in water):
-
                     self.update_water_blocks_above_and_below_me(True, True)
-
                     self.rect.move_ip(spot[0]*TILE_SIZE, spot[1]*TILE_SIZE)
-                    
-                    for block in self.water_blocks_above_me:
-                        block.update(True)
-                    
-                    self.update_water_blocks_above_and_below_me(True, False)
-                    for block in self.water_blocks_above_me:
-                        block.update(True)
-                    
-                    self.update_water_blocks_above_and_below_me(True, False)
-                    for block in self.water_blocks_above_me:
-                        block.update(True)
 
+                    global update_water_blocks
+                    for i in self.water_blocks_above_me:
+                        update_water_blocks[1].append(i)
+                    
                     return
                         
         
@@ -766,6 +758,7 @@ clock = pygame.time.Clock()
 running = 1
 target = player
 start_time = time.time()
+update_water_blocks = [[], []]
 
 while running:
     for event in pygame.event.get():
@@ -833,6 +826,11 @@ while running:
     for water_block in water:
         if len(water_block.water_blocks_below_me) == 0:
             water_block.update()
+    
+    for water_block in update_water_blocks[0]:
+        water_block.update(True)
+    update_water_blocks = [set(update_water_blocks[1]), []]
+
 
     clouds.update()
     spikes.update()
