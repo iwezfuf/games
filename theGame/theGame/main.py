@@ -45,10 +45,10 @@ level = (
         "PP               WWWWWWWWW                                                                                                    PP",
         "PP                WWWWWW                                                                                                      PP",
         "PP      PPP       WWWWW                                                            PPPPPPPPPPPP                               PP",
-        "PP PP P                                       WWWWW                                                                                PP",
+        "PP PP P                                                                                                                       PP",
         "PP                    B     SSSSSSS                                                                                           PP",
         "PP                 PPPPPP                   PPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPP        PPPPPPPPPPPPPPPPP",
-        "PP          1                            WWW                                                                                     PP",
+        "PP          1                                                                                                                 PP",
         "PP         PPPPPPP                                                                                                            PP",
         "PP                      3                                                                                                     PP",
         "PP                     PPPPPP                                                                                                 PP",
@@ -102,8 +102,7 @@ class Spike(pygame.sprite.Sprite):
         all_sprites.add(self)
     
     def update(self):
-        if is_on_screen(self):
-            screen.blit(spike_image, (self.rect.center[0]-15, self.rect.center[1]-15))
+        screen.blit(spike_image, (self.rect.center[0]-15, self.rect.center[1]-15))
 
 class Water(pygame.sprite.Sprite):
     def __init__(self, position):
@@ -803,7 +802,6 @@ while running:
 
     screen.fill((135, 206, 250))
     offset_x, offset_y = camera.update(target)
-    screen.blit(screeen.surf, screeen.rect)
     bullets.update()
     
 
@@ -812,8 +810,9 @@ while running:
         if entity != player:
             entity.rect.move_ip(offset_x, offset_y) # scrolling movement - character stays in the middle, everything else moves
             
-        if entity not in spikes and entity != player and entity not in clouds:
-            screen.blit(entity.surf, entity.rect)
+        if entity != player and entity not in clouds:
+            if is_on_screen(entity):
+                screen.blit(entity.surf, entity.rect)
 
     # Water init - for water to move even if I can't see it after starting game
     if time.time() - start_time < 0.1:
@@ -847,4 +846,4 @@ while running:
     
         
     pygame.display.flip()
-    clock.tick(100)
+    clock.tick(60)
