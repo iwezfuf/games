@@ -1,4 +1,3 @@
-from turtle import up
 from pygame.locals import *
 import random
 import time
@@ -42,7 +41,7 @@ level = (
         "PP                                                                                                                            PP",
         "PP                                                                                                                            PP",
         "PP                    PPPPPPPPPPP                                                                                             PP",
-        "PP                                WWWWWWWW                                                                                            PP",
+        "PP                                WWWWWW                                                                                      PP",
         "PP               WWWWWWWWW                                                                                                    PP",
         "PP                WWWWWW                                                                                                      PP",
         "PP      PPP       WWWWW                                                            PPPPPPPPPPPP                               PP",
@@ -54,11 +53,11 @@ level = (
         "PP                      3                                                                                                     PP",
         "PP                     PPPPPP                                                                                                 PP",
         "PP         <B                                                                                                                 PP",
-        "PP   PPPPPPPPPPP                       WWWWWWW       WWWWWWWW                                                                                PP",
-        "PP                    >  B         WWWWWWW                                  PPPPPPPPP                                               PP",
+        "PP   PPPPPPPPPPP                       WWWWWWW                                                                                PP",
+        "PP                    >  B         WWWWWWW                                  PPPPPPPPP                                         PP",
         "PP                 PPPPPPPPPPP  P  WWWWWWW                                                                                    PP",
-        "PP                              P  WWWWWWWWWWWWWWWW                                                                                    PP",
-        "PP                              P  WWWWWWW                        WWWWW                                                            PP",
+        "PP                              P  WWWWWWWWWWWWWWWW                                                                           PP",
+        "PP                              P  WWWWWWW                                                                                    PP",
         "PP                              P  WWWWWWW                                                                                    PP",
         "PP                              P  WWWWWWW                                                                                    PP",
         "PPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPP",
@@ -120,17 +119,17 @@ class Water(pygame.sprite.Sprite):
 
     def update(self, forced=False):
         if is_on_screen(self) or forced:
+            self.update_water_blocks_above_and_below_me(True, True)
             potential_spots = ((0, 1*gravity_direction), (1, 1*gravity_direction), (-1, 1*gravity_direction))
             for spot in potential_spots:
                 new_spot = (int(self.rect.center[0]+spot[0]*TILE_SIZE), int(self.rect.center[1]+spot[1]*TILE_SIZE))
                 if not any(wall.rect.collidepoint(new_spot) for wall in walls) and not any(water_block.rect.collidepoint(new_spot) for water_block in water):
-                    self.update_water_blocks_above_and_below_me(True, True)
                     self.rect.move_ip(spot[0]*TILE_SIZE, spot[1]*TILE_SIZE)
 
                     global update_water_blocks
                     for i in self.water_blocks_above_me:
                         update_water_blocks[1].append(i)
-                    
+                    update_water_blocks[1].append(self)
                     return
                         
         
@@ -366,8 +365,8 @@ class Creature(Gravity_thing):
     def shoot(self):
         if self.gun_ready:
             if self.direction == "right":
-                bullet = Bullet([self.rect.midright, self.direction])
-            else: bullet = Bullet([self.rect.midleft, self.direction])
+                Bullet([self.rect.midright, self.direction])
+            else: Bullet([self.rect.midleft, self.direction])
             self.gun_ready = False
             pygame.time.set_timer(RELOAD, 700)
 
@@ -506,7 +505,7 @@ class Box(Gravity_thing):
         
     def update(self):
         self.moving()
-        self.vector.x = 0
+        self.vector.x = 0   # Remove if want boxes to slide
 
 
 class Turret(Gravity_thing):
@@ -518,12 +517,12 @@ class Turret(Gravity_thing):
 
     def update(self):
         self.moving()
-        self.vector.x = 0
+        self.vector.x = 0    # Remove if want boxes to slide
 
     def shoot(self):
         if self.direction == -1:
-            bullet = Bullet([self.rect.midleft, "left"])
-        else: bullet = Bullet([self.rect.midright, "right"])        
+            Bullet([self.rect.midleft, "left"])
+        else: Bullet([self.rect.midright, "right"])        
         
 
 class Soldier(Creature):
@@ -561,7 +560,6 @@ class Node(Gravity_thing):
         self.rope = rope
         self.sticked = False
         gravity_things.add(self)
-        #boxes.add(self)
         nodes.add(self)
 
     def update(self):
@@ -726,8 +724,6 @@ nodes = pygame.sprite.Group()
 player = Player()
 coins_sign = Sign([10,10], ['Coins: ', player.coins], 30, [0,0,0])
 rope = Rope([150,50], 8)
-water_update_dict = {}
-water_positions = {}
 
 x = y = 0
 for row in level:
@@ -784,6 +780,7 @@ while running:
                 turret.shoot()
         elif event.type == pygame.MOUSEBUTTONDOWN:
             x,y = pygame.mouse.get_pos()
+            '''    Destroy block if it's clicked on
             for thing in all_sprites:
                 if thing.rect.collidepoint((x,y)):
                     try:
@@ -798,6 +795,7 @@ while running:
 
                     except: pass
                     thing.kill()
+            '''
             hook = Hook([x,y], player)
         elif event.type == pygame.MOUSEBUTTONUP:
             player.end_hook()
@@ -812,17 +810,18 @@ while running:
 
     for entity in all_sprites:
         if entity != player:
-            entity.rect.move_ip(offset_x, offset_y) # scrollovanie vsetkeho
+            entity.rect.move_ip(offset_x, offset_y) # scrolling movement - character stays in the middle, everything else moves
             
         if entity not in spikes and entity != player and entity not in clouds:
             screen.blit(entity.surf, entity.rect)
 
-    # Aby sa voda na zaciatku pohla aj ked ju nevidim
-    if time.time() - start_time < 1:
+    # Water init - for water to move even if I can't see it after starting game
+    if time.time() - start_time < 0.1:
         for water_block in water:
             if len(water_block.water_blocks_below_me) == 0:
                 water_block.update(True)
-
+    
+    # water blocks at the bottom of chunks of water check if can move
     for water_block in water:
         if len(water_block.water_blocks_below_me) == 0:
             water_block.update()
