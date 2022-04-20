@@ -511,9 +511,9 @@ class Box(Gravity_thing):
 
 
 class Turret(Gravity_thing):
-    def __init__(self, position, direction):
+    def __init__(self, position, shootdirection):
         super(Turret, self).__init__(position, 4, 50000, 1.2)
-        self.direction = direction
+        self.shootdirection = shootdirection
         turrets.add(self)
         boxes.add(self)
 
@@ -522,7 +522,7 @@ class Turret(Gravity_thing):
         self.vector.x = 0    # Remove if want boxes to slide
 
     def shoot(self):
-        if self.direction == -1:
+        if self.shootdirection == -1:
             Bullet([self.rect.midleft, "left"])
         else: Bullet([self.rect.midright, "right"])        
         
@@ -649,7 +649,9 @@ class Bullet(pygame.sprite.Sprite):
         self.surf = pygame.Surface([9,9])
         self.surf.fill([0,0,0])
         self.shooting = shooting
-        self.rect = self.surf.get_rect(bottomleft=shooting[0])
+        if self.shooting[1] == "left":
+            self.rect = self.surf.get_rect(center=(shooting[0][0]-5, shooting[0][1]))
+        else: self.rect = self.surf.get_rect(center=(shooting[0][0]+5, shooting[0][1]))
         self.velocity = 30
         bullets.add(self)
         all_sprites.add(self)
