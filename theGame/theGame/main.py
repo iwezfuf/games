@@ -727,29 +727,33 @@ player = Player()
 coins_sign = Sign([10,10], ['Coins: ', player.coins], 30, [0,0,0])
 rope = Rope([150,50], 8)
 
-x = y = 0
-for row in level:
-    for col in row:
-        if col == "P":
-            platform = Wall([x,y], [200,200,200])
-        if col == "S":
-            spike = Spike([x,y])
-        if col == "B":
-            box = Box([x,y], [100, 100, 100], 70, 3)
-        try: soldier = Soldier([x,y], [x+int(col)*TILE_SIZE, y])
-        except ValueError: pass
-        if col == "W":
-            water_block = Water([x,y])
-        if col == "C":
-            coin = Coin([x,y])
-        if col == "<":
-            turret = Turret([x,y], -1)
-        if col == ">":
-            turret = Turret([x,y], 1)
-            
-        x += TILE_SIZE
-    y += TILE_SIZE
-    x = 0
+
+def create_level(level):
+    x = y = 0
+    for row in level:
+        for col in row:
+            if col == "P":
+                Wall([x,y], [200,200,200])
+            if col == "S":
+                Spike([x,y])
+            if col == "B":
+                box = Box([x,y], [100, 100, 100], 70, 3)
+            try: Soldier([x,y], [x+int(col)*TILE_SIZE, y])
+            except ValueError: pass
+            if col == "W":
+                Water([x,y])
+            if col == "C":
+                Coin([x,y])
+            if col == "<":
+                Turret([x,y], -1)
+            if col == ">":
+                Turret([x,y], 1)
+                
+            x += TILE_SIZE
+        y += TILE_SIZE
+        x = 0
+
+create_level(level)
 
 clock = pygame.time.Clock()
 
@@ -807,8 +811,6 @@ while running:
     offset_x, offset_y = camera.update(target)
     bullets.update()
     
-
-
     for entity in all_sprites:
         if entity != player:
             entity.rect.move_ip(offset_x, offset_y) # scrolling movement - character stays in the middle, everything else moves
@@ -832,7 +834,6 @@ while running:
         water_block.update(True)
     update_water_blocks = [set(update_water_blocks[1]), []]
 
-
     clouds.update()
     spikes.update()
     
@@ -840,11 +841,10 @@ while running:
         if gravity_thing != player:
             gravity_thing.update()
 
-
     coins_sign.change_text(str(player.coins))
     for sign in signs:
         screen.blit(sign.textsurface,sign.position)
-    
+
         
     pygame.display.flip()
     clock.tick(60)
