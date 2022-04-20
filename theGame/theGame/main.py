@@ -119,7 +119,7 @@ class Water(pygame.sprite.Sprite):
         self.water_blocks_above_me = []
         self.water_blocks_below_me = []
 
-    def update(self, forced=False):
+    def update(self, update_water_blocks, forced=False):
         if is_on_screen(self) or forced:
             self.update_water_blocks_above_and_below_me(True, True)
             potential_spots = ((0, 1*gravity_direction), (1, 1*gravity_direction), (-1, 1*gravity_direction))
@@ -128,7 +128,6 @@ class Water(pygame.sprite.Sprite):
                 if not any(wall.rect.collidepoint(new_spot) for wall in walls) and not any(water_block.rect.collidepoint(new_spot) for water_block in water):
                     self.rect.move_ip(spot[0]*TILE_SIZE, spot[1]*TILE_SIZE)
 
-                    global update_water_blocks
                     for i in self.water_blocks_above_me:
                         update_water_blocks[1].append(i)
                     update_water_blocks[1].append(self)
@@ -367,8 +366,11 @@ class Creature(Gravity_thing):
     def shoot(self):
         if self.gun_ready:
             if self.direction == "right":
-                Bullet([self.rect.midright, self.direction])
-            else: Bullet([self.rect.midleft, self.direction])
+                bullet = Bullet([self.rect.midright, self.direction])
+                bullet.update()
+            else: 
+                bullet = Bullet([self.rect.midleft, self.direction])
+                bullet.update()
             self.gun_ready = False
             pygame.time.set_timer(RELOAD, 700)
 
@@ -523,8 +525,11 @@ class Turret(Gravity_thing):
 
     def shoot(self):
         if self.shootdirection == -1:
-            Bullet([self.rect.midleft, "left"])
-        else: Bullet([self.rect.midright, "right"])        
+            bullet = Bullet([self.rect.midleft, "left"])
+            bullet.update()
+        else:
+            bullet = Bullet([self.rect.midright, "right"])
+            bullet.update()
         
 
 class Soldier(Creature):
@@ -532,12 +537,15 @@ class Soldier(Creature):
         super().__init__(position, 3, 50)
         self.left = position
         self.right = path
+        soldiers.add(self)
 
-    def update(self):
+    def update(self, offset_x, offset_y):
+        
         self.right[0] += offset_x
         self.left[0] += offset_x
         self.right[1] += offset_y
         self.left[1] += offset_y
+        
         if self.rect.right > self.right[0]:
             self.speed *= -1
         if self.rect.right < self.left[0]:
@@ -650,8 +658,8 @@ class Bullet(pygame.sprite.Sprite):
         self.surf.fill([0,0,0])
         self.shooting = shooting
         if self.shooting[1] == "left":
-            self.rect = self.surf.get_rect(center=(shooting[0][0]-5, shooting[0][1]))
-        else: self.rect = self.surf.get_rect(center=(shooting[0][0]+5, shooting[0][1]))
+            self.rect = self.surf.get_rect(center=shooting[0])
+        else: self.rect = self.surf.get_rect(center=shooting[0])
         self.velocity = 30
         bullets.add(self)
         all_sprites.add(self)
@@ -704,7 +712,6 @@ class Camera():
         offset_y = initial_position[1] - new_position[1]
         target.rect.move_ip(offset_x, offset_y)
         return offset_x, offset_y
-        
 
 ADDCLOUD = pygame.USEREVENT + 1
 pygame.time.set_timer(ADDCLOUD, 1000)
@@ -713,7 +720,6 @@ TURRETS = pygame.USEREVENT + 3
 pygame.time.set_timer(TURRETS, 2000)
 
 boxes = pygame.sprite.Group()
-camera = Camera()
 all_sprites = pygame.sprite.Group()
 gravity_things = pygame.sprite.Group()
 walls = pygame.sprite.Group()
@@ -725,12 +731,12 @@ signs = pygame.sprite.Group()
 water = pygame.sprite.Group()
 turrets = pygame.sprite.Group()
 nodes = pygame.sprite.Group()
-player = Player()
-coins_sign = Sign([10,10], ['Coins: ', player.coins], 30, [0,0,0])
+soldiers = pygame.sprite.Group()
+coins_sign = Sign([10,10], ['Coins: ', "0"], 30, [0,0,0])
 rope = Rope([150,50], 8)
 
 
-def destroy_block_by_location(coords):
+def destroy_block_by_location(coords):    # Unused
     for thing in all_sprites:
         if thing.rect.collidepoint(coords):
             try:
@@ -747,108 +753,129 @@ def destroy_block_by_location(coords):
             thing.kill()
             
 
-def create_level(level):
-    x = y = 0
-    for row in level:
-        for col in row:
-            if col == "P":
-                Wall([x,y], [200,200,200])
-            if col == "S":
-                Spike([x,y])
-            if col == "B":
-                Box([x,y], [100, 100, 100], 70, 3)
-            try: Soldier([x,y], [x+int(col)*TILE_SIZE, y])
-            except ValueError: pass
-            if col == "W":
-                Water([x,y])
-            if col == "C":
-                Coin([x,y])
-            if col == "<":
-                Turret([x,y], -1)
-            if col == ">":
-                Turret([x,y], 1)
-                
-            x += TILE_SIZE
-        y += TILE_SIZE
-        x = 0
+class Game():
+    def __init__(self, player):
+        self.state = 1
+        self.target = player
+        self.start_time = 0
+        self.clock = 0
+        self.clock_speed = 60
+        self.update_water_blocks = [[], []]
+        self.camera = Camera()
 
-create_level(level)
-
-clock = pygame.time.Clock()
-
-running = 1
-target = player
-start_time = time.time()
-update_water_blocks = [[], []]
-
-while running:
-    for event in pygame.event.get():
-        if event.type == KEYDOWN:
-            if event.key == K_ESCAPE:
-                running = False
-                pygame.display.quit()
-            if event.key == K_g:
-                gravity = pygame.Vector2((0, 0.5*-gravity_direction))
-                gravity_direction = gravity[1]/abs(gravity[1])
-        elif event.type == QUIT:
-            running = False
-            pygame.display.quit()
-        elif event.type == ADDCLOUD:
-            turrets.update()
-            new_cloud = Cloud()
-            clouds.add(new_cloud)
-            all_sprites.add(new_cloud)
-        elif event.type == RELOAD:
-            player.gun_ready = True
-        elif event.type == TURRETS:
-            for turret in turrets:
-                turret.shoot()
-        elif event.type == pygame.MOUSEBUTTONDOWN:
-            x,y = pygame.mouse.get_pos()
-            #destroy_block_by_location((x, y))
-            hook = Hook([x,y], player)
-        elif event.type == pygame.MOUSEBUTTONUP:
-            player.end_hook()
-
-
-    screen.fill((135, 206, 250))
-    offset_x, offset_y = camera.update(target)
-    bullets.update()
+    def start(self):
+        self.create_level(level)
+        self.clock = pygame.time.Clock()
+        self.start_time = time.time()
+        while self.state:
+            self.game_loop()
     
-    for entity in all_sprites:
-        if entity != player:
-            entity.rect.move_ip(offset_x, offset_y) # scrolling movement - character stays in the middle, everything else moves
-            
-        if entity != player and entity not in clouds:
-            if is_on_screen(entity):
-                screen.blit(entity.surf, entity.rect)
+    def game_loop(self):
+        self.handle_events()
+        screen.fill((135, 206, 250))
+        offset_x, offset_y = self.camera.update(self.target)
 
-    # Water init - for water to move even if I can't see it after starting game
-    if time.time() - start_time < 0.1:
+        bullets.update()
+        clouds.update()
+        spikes.update()
+
+        self.handle_water_updates()
+
+        for gravity_thing in gravity_things:
+            if gravity_thing != player and gravity_thing not in soldiers:
+                gravity_thing.update()
+            if gravity_thing in soldiers:
+                gravity_thing.update(offset_x, offset_y)
+
+        for entity in all_sprites:
+            if entity != player:
+                entity.rect.move_ip(offset_x, offset_y) # scrolling movement - character stays in the middle, everything else moves
+                
+            if entity != player and entity not in clouds:
+                if is_on_screen(entity):
+                    screen.blit(entity.surf, entity.rect)
+        
+        coins_sign.change_text("Coins: " + str(player.coins))
+        for sign in signs:
+            screen.blit(sign.textsurface,sign.position)
+            
+        pygame.display.flip()
+        self.clock.tick(self.clock_speed)
+
+
+    def handle_water_updates(self):
+        # Water init - for water to move even if I can't see it after starting game
+        if time.time() - self.start_time < 0.1:
+            for water_block in water:
+                if len(water_block.water_blocks_below_me) == 0:
+                    water_block.update(self.update_water_blocks, True)
+        
+        # water blocks at the bottom of chunks of water check if can move
         for water_block in water:
             if len(water_block.water_blocks_below_me) == 0:
-                water_block.update(True)
-    
-    # water blocks at the bottom of chunks of water check if can move
-    for water_block in water:
-        if len(water_block.water_blocks_below_me) == 0:
-            water_block.update()
-    
-    for water_block in update_water_blocks[0]:
-        water_block.update(True)
-    update_water_blocks = [set(update_water_blocks[1]), []]
-
-    clouds.update()
-    spikes.update()
-    
-    for gravity_thing in gravity_things:
-        if gravity_thing != player:
-            gravity_thing.update()
-
-    coins_sign.change_text(str(player.coins))
-    for sign in signs:
-        screen.blit(sign.textsurface,sign.position)
-
+                water_block.update(self.update_water_blocks)
         
-    pygame.display.flip()
-    clock.tick(60)
+        for water_block in self.update_water_blocks[0]:
+            water_block.update(self.update_water_blocks, True)
+        self.update_water_blocks = [set(self.update_water_blocks[1]), []]
+
+    
+    def handle_events(self):
+        for event in pygame.event.get():
+            if event.type == KEYDOWN:
+                if event.key == K_ESCAPE:
+                    self.state = False
+                    pygame.display.quit()
+                if event.key == K_g:
+                    gravity = pygame.Vector2((0, 0.5*-gravity_direction))
+                    gravity_direction = gravity[1]/abs(gravity[1])
+            elif event.type == QUIT:
+                self.state = False
+                pygame.display.quit()
+            elif event.type == ADDCLOUD:
+                turrets.update()
+                new_cloud = Cloud()
+                clouds.add(new_cloud)
+                all_sprites.add(new_cloud)
+            elif event.type == RELOAD:
+                player.gun_ready = True
+            elif event.type == TURRETS:
+                for turret in turrets:
+                    turret.shoot()
+            elif event.type == pygame.MOUSEBUTTONDOWN:
+                x,y = pygame.mouse.get_pos()
+                #destroy_block_by_location((x, y))
+                Hook([x,y], player)
+            elif event.type == pygame.MOUSEBUTTONUP:
+                player.end_hook()
+
+    
+    def create_level(self, level):
+        x = y = 0
+        for row in level:
+            for col in row:
+                if col == "P":
+                    Wall([x,y], [200,200,200])
+                if col == "S":
+                    Spike([x,y])
+                if col == "B":
+                    Box([x,y], [100, 100, 100], 70, 3)
+                try: Soldier([x,y], [x+int(col)*TILE_SIZE, y])
+                except ValueError: pass
+                if col == "W":
+                    Water([x,y])
+                if col == "C":
+                    Coin([x,y])
+                if col == "<":
+                    Turret([x,y], -1)
+                if col == ">":
+                    Turret([x,y], 1)
+                    
+                x += TILE_SIZE
+            y += TILE_SIZE
+            x = 0
+
+
+player = Player()
+game = Game(player)
+game.start()
