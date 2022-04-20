@@ -80,6 +80,9 @@ class Sign(pygame.sprite.Sprite):
         self.textsurface = self.myfont.render("".join([str(i) for i in self.text]), False, self.color)
         signs.add(self)
 
+    def change_text(self, text):
+        self.text = text
+        self.textsurface = self.myfont.render("".join([str(i) for i in self.text]), False, self.color)
 
 class Wall(pygame.sprite.Sprite):
     def __init__(self, center, color):
@@ -837,10 +840,8 @@ while running:
         if gravity_thing != player:
             gravity_thing.update()
 
-            
-    coins_sign.kill()
-    del(coins_sign)
-    coins_sign = Sign([10,10], ['Coins: ', player.coins], 30, [0,0,0])
+
+    coins_sign.change_text(str(player.coins))
     for sign in signs:
         screen.blit(sign.textsurface,sign.position)
     
