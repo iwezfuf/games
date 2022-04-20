@@ -730,6 +730,23 @@ coins_sign = Sign([10,10], ['Coins: ', player.coins], 30, [0,0,0])
 rope = Rope([150,50], 8)
 
 
+def destroy_block_by_location(coords):
+    for thing in all_sprites:
+        if thing.rect.collidepoint(coords):
+            try:
+                thing.update_water_blocks_above_and_below_me(True, True)
+                
+                for block in thing.water_blocks_above_me:
+                    block.update(True)
+                
+                thing.update_water_blocks_above_and_below_me(True, False)
+                for block in thing.water_blocks_above_me:
+                    block.update(True)
+
+            except: pass
+            thing.kill()
+            
+
 def create_level(level):
     x = y = 0
     for row in level:
@@ -739,7 +756,7 @@ def create_level(level):
             if col == "S":
                 Spike([x,y])
             if col == "B":
-                box = Box([x,y], [100, 100, 100], 70, 3)
+                Box([x,y], [100, 100, 100], 70, 3)
             try: Soldier([x,y], [x+int(col)*TILE_SIZE, y])
             except ValueError: pass
             if col == "W":
@@ -788,22 +805,7 @@ while running:
                 turret.shoot()
         elif event.type == pygame.MOUSEBUTTONDOWN:
             x,y = pygame.mouse.get_pos()
-            '''    Destroy block if it's clicked on
-            for thing in all_sprites:
-                if thing.rect.collidepoint((x,y)):
-                    try:
-                        thing.update_water_blocks_above_and_below_me(True, True)
-                        
-                        for block in thing.water_blocks_above_me:
-                            block.update(True)
-                        
-                        thing.update_water_blocks_above_and_below_me(True, False)
-                        for block in thing.water_blocks_above_me:
-                            block.update(True)
-
-                    except: pass
-                    thing.kill()
-            '''
+            #destroy_block_by_location((x, y))
             hook = Hook([x,y], player)
         elif event.type == pygame.MOUSEBUTTONUP:
             player.end_hook()
