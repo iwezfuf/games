@@ -48,9 +48,9 @@ level = (
         "PP PP P                                                                                                                       PP",
         "PP                    B     SSSSSSS                                                                                           PP",
         "PP                 PPPPPP                   PPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPP        PPPPPPPPPPPPPPPPP",
-        "PP          1                                                                                                                 PP",
+        "PP          3                                                                                                                 PP",
         "PP         PPPPPPP                                                                                                            PP",
-        "PP                      3                                                                                                     PP",
+        "PP                                                                                                                            PP",
         "PP                     PPPPPP                                                                                                 PP",
         "PP         <B                                                                                                                 PP",
         "PP   PPPPPPPPPPP                       WWWWWWW                                                                                PP",
@@ -262,10 +262,11 @@ class Gravity_thing(pygame.sprite.Sprite):
             if self != player or not self.hooked[0]:
                 self.gravity()
 
+
         if self != player or not self.hooked[0]:
             self.friction()
         self.onGround = False
-        
+
         self.rect.move_ip(self.vector.x, 0)
         
         block_hit_list = pygame.sprite.spritecollide(self, walls, False)
@@ -385,6 +386,7 @@ class Player(Creature):
         self.player_image = pygame.image.load(r'character.png')
 
     def end_hook(self):
+        self.hooked[0].kill()
         self.hooked = [False, 0, 0, 0]
         self.freefall = True
         self.vector.y *= 1.5
@@ -534,21 +536,19 @@ class Turret(Gravity_thing):
 
 class Soldier(Creature):
     def __init__(self, position, path):
-        super().__init__(position, 3, 50)
+        super().__init__(position, 1.5, 50)
         self.left = position
         self.right = path
         soldiers.add(self)
 
-    def update(self, offset_x, offset_y):
-        
+    def update(self, offset_x, offset_y):        
         self.right[0] += offset_x
         self.left[0] += offset_x
         self.right[1] += offset_y
         self.left[1] += offset_y
-        
-        if self.rect.right > self.right[0]:
+        if self.rect.right > self.right[0] and self.speed > 0:
             self.speed *= -1
-        if self.rect.right < self.left[0]:
+        if self.rect.left < self.left[0] and self.speed < 0:
             self.speed *= -1
         self.move(self.speed, 0)
 
