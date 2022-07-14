@@ -39,22 +39,22 @@ level = (
         "PPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPP",
         "PP                                                                                                                            PP",
         "PP                                                                                                                            PP",
-        "PP                                                                                                                            PP",
+        "PP                                                   M                 M                                                      PP",
         "PP              PP    PPPPPPPPPPP                                                                                             PP",
         "PP                                WWWWWW                                                                                      PP",
         "PP               WWWWWWWWW                                                                                                    PP",
         "PP                WWWWWW                                                                                                      PP",
-        "PP      PPP       WWWWW                                                            PPPPPPPPPPPP                               PP",
+        "PP      PPP       WWWWW                      M              M                      PPPPPPPPPPPP                               PP",
         "PP PP P                                                                                                                       PP",
-        "PP                    B     SSSSSSS                                                                                           PP",
+        "PP     M       M      B     SSSSSSS                                                                                           PP",
         "PP                 PPPPPP                   PPPPPPPPPPPPPPPPTTTTTPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPP        PPPPPPPPPPPPPPPPP",
         "PP          3                                                                                                                 PP",
-        "PP         PPPPPPP                                                                                                            PP",
+        "PP         PPPPPPP                                   M            M                                                           PP",
         "PP                                                                                                                            PP",
         "PP                     PPTTPP                                                                                                 PP",
         "PP         <B                                                                                                                 PP",
         "PP   PPPPPPPPPPP                       WWWWWWW                                                                                PP",
-        "PP                    >  B         WWWWWWW                                  PPPPPPPPP                                         PP",
+        "PP                    >P B         WWWWWWW                                  PPPPPPPPP                                         PP",
         "PP                 PPPPPPPPPPP  P  WWWWWWW                                                                                    PP",
         "PP                              P  WWWWWWWWWWWWWWWW                                                                           PP",
         "PP                              P  WWWWWWW                                                                                    PP",
@@ -92,6 +92,32 @@ class Wall(pygame.sprite.Sprite):
         self.rect = self.surf.get_rect(bottomleft=center)
         all_sprites.add(self)
         walls.add(self)
+
+
+class MovingPlatform(pygame.sprite.Sprite):
+    def __init__(self, start, end):
+        super(MovingPlatform, self).__init__()
+        self.surf = pygame.Surface([TILE_SIZE*3, TILE_SIZE])
+        self.surf.fill([255,0,0])
+        self.rect = self.surf.get_rect(bottomleft=start)
+        all_sprites.add(self)
+        walls.add(self)
+        movingplatforms.add(self)
+        self.start = start
+        self.end = end
+        self.vector = [1, 0]
+    
+    def update(self, offset_x, offset_y):
+        self.start[0] += offset_x
+        self.end[0] += offset_x
+        self.start[1] += offset_y
+        self.end[1] += offset_y
+
+        self.rect.move_ip(self.vector[0], 0)
+        if self.rect.right > self.end[0]:
+            self.vector[0] *= -1
+        if self.rect.left < self.start[0]:
+            self.vector[0] *= -1
 
 spike_image = pygame.image.load(r'spike.png')
 
@@ -474,6 +500,10 @@ class Player(Creature):
                 self.hooked[1].sticking()
             else:
                 x,y = self.hooked[1].node.rect.center
+
+                if self.hooked[1].node.platform:
+                        self.rect.move_ip(self.hooked[1].node.platform.vector[0], self.hooked[1].node.platform.vector[1])
+
                 pygame.draw.line(screen, [0,0,0], [player.rect.center[0], player.rect.center[1]],[x,y])
 
                 vector_to_me = (x - self.rect.center[0], y - self.rect.center[1])
@@ -602,8 +632,15 @@ class Node(Gravity_thing):
         self.sticked = False
         gravity_things.add(self)
         nodes.add(self)
+        self.platform = 0
+
+        for platform in movingplatforms:
+            if self.rect.colliderect(platform):
+                self.platform = platform
 
     def update(self):
+        if self.platform:
+            self.rect.move_ip(self.platform.vector[0], self.platform.vector[1])
         self.moving()
         self.vector.x *= 0.8
 
@@ -779,6 +816,7 @@ turrets = pygame.sprite.Group()
 nodes = pygame.sprite.Group()
 soldiers = pygame.sprite.Group()
 trampolines = pygame.sprite.Group()
+movingplatforms = pygame.sprite.Group()
 coins_sign = Sign([10,10], ['Coins: ', "0"], 30, [0,0,0])
 rope = Rope([150,50], 8)
 
@@ -825,6 +863,7 @@ class Game():
         bullets.update()
         clouds.update()
         spikes.update()
+        movingplatforms.update(offset_x, offset_y)
 
         self.handle_water_updates()
 
@@ -900,6 +939,7 @@ class Game():
     def create_level(self, level):
         x = y = 0
         for row in level:
+            platform = 0
             for col in row:
                 if col == "P":
                     Wall([x,y], [200,200,200])
@@ -911,6 +951,12 @@ class Game():
                 except ValueError: pass
                 if col == "W":
                     Water([x,y])
+                if col == "M":
+                    if platform:
+                        MovingPlatform([platform, y], [x, y])
+                        platform = 0
+                    else: 
+                        platform = x
                 if col == "T":
                     Trampoline([x,y])
                 if col == "C":
