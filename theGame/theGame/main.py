@@ -40,18 +40,18 @@ level = (
         "PP                                                                                                                            PP",
         "PP                                                                                                                            PP",
         "PP                                                                                                                            PP",
-        "PP                    PPPPPPPPPPP                                                                                             PP",
+        "PP              PP    PPPPPPPPPPP                                                                                             PP",
         "PP                                WWWWWW                                                                                      PP",
         "PP               WWWWWWWWW                                                                                                    PP",
         "PP                WWWWWW                                                                                                      PP",
         "PP      PPP       WWWWW                                                            PPPPPPPPPPPP                               PP",
         "PP PP P                                                                                                                       PP",
         "PP                    B     SSSSSSS                                                                                           PP",
-        "PP                 PPPPPP                   PPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPP        PPPPPPPPPPPPPPPPP",
+        "PP                 PPPPPP                   PPPPPPPPPPPPPPPPTTTTTPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPP        PPPPPPPPPPPPPPPPP",
         "PP          3                                                                                                                 PP",
         "PP         PPPPPPP                                                                                                            PP",
         "PP                                                                                                                            PP",
-        "PP                     PPPPPP                                                                                                 PP",
+        "PP                     PPTTPP                                                                                                 PP",
         "PP         <B                                                                                                                 PP",
         "PP   PPPPPPPPPPP                       WWWWWWW                                                                                PP",
         "PP                    >  B         WWWWWWW                                  PPPPPPPPP                                         PP",
@@ -60,7 +60,7 @@ level = (
         "PP                              P  WWWWWWW                                                                                    PP",
         "PP                              P  WWWWWWW                                                                                    PP",
         "PP                              P  WWWWWWW                                                                                    PP",
-        "PPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPP",
+        "PPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPTTTTPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPTTTPPPPPPPPPPPPPPPPPPP",
         "PPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPP")
 
 
@@ -106,6 +106,15 @@ class Spike(pygame.sprite.Sprite):
     
     def update(self):
         screen.blit(spike_image, (self.rect.center[0]-15, self.rect.center[1]-15))
+
+class Trampoline(pygame.sprite.Sprite):
+    def __init__(self, position):
+        super(Trampoline, self).__init__()
+        self.surf = pygame.Surface([TILE_SIZE, TILE_SIZE])
+        self.surf.fill([0,255,0])
+        self.rect = self.surf.get_rect(bottomleft=position)
+        trampolines.add(self)
+        all_sprites.add(self)
 
 class Water(pygame.sprite.Sprite):
     def __init__(self, position):
@@ -333,8 +342,8 @@ class Gravity_thing(pygame.sprite.Sprite):
                 self.vector.y = 0
 
 
-        spikess = pygame.sprite.spritecollide(self, spikes, False)
-        for spike in spikess:
+        spikes_hit_list = pygame.sprite.spritecollide(self, spikes, False)
+        for spike in spikes_hit_list:
             if self.rect.bottom < spike.rect.bottom:
                 self.rect.bottom = spike.rect.top
                 self.hp -= 5
@@ -345,8 +354,21 @@ class Gravity_thing(pygame.sprite.Sprite):
 
             self.freefall = False
         
+        trampolines_hit_list = pygame.sprite.spritecollide(self, trampolines, False)
+        for trampoline in trampolines_hit_list:
+            self.freefall = False
+            if self.rect.bottom < trampoline.rect.bottom:
+                self.rect.bottom = trampoline.rect.top
+                self.vector.y *= -1.25
+                self.vector.y = max(-18, self.vector.y)
+                break
+            else:
+                self.rect.top = trampoline.rect.bottom
+                self.vector.y = 0
+
+        
         if self.amIHooked():
-            if spikess or box_hit_list or block_hit_list:
+            if spikes_hit_list or box_hit_list or block_hit_list or trampolines_hit_list:
                 self.end_hook()
 
         
@@ -756,6 +778,7 @@ water = pygame.sprite.Group()
 turrets = pygame.sprite.Group()
 nodes = pygame.sprite.Group()
 soldiers = pygame.sprite.Group()
+trampolines = pygame.sprite.Group()
 coins_sign = Sign([10,10], ['Coins: ', "0"], 30, [0,0,0])
 rope = Rope([150,50], 8)
 
@@ -888,6 +911,8 @@ class Game():
                 except ValueError: pass
                 if col == "W":
                     Water([x,y])
+                if col == "T":
+                    Trampoline([x,y])
                 if col == "C":
                     Coin([x,y])
                 if col == "<":
