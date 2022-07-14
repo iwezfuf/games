@@ -179,7 +179,13 @@ class Gravity_thing(pygame.sprite.Sprite):
         self.velocity = 0
         all_sprites.add(self)
         gravity_things.add(self)
+    
 
+    def amIHooked(self):
+        if self != player or not self.hooked[0] or not self.hooked[1].success:
+            return False
+        else:
+            return True
 
     def move(self, x, y):
         self.vector.x += x
@@ -191,7 +197,7 @@ class Gravity_thing(pygame.sprite.Sprite):
 
     def gravity(self):
         if not self.onRope:
-            if self != player or not self.hooked[0]:
+            if not self.amIHooked():
                 self.vector += gravity*self.weight
             if self.vector.y > 40:
                 self.vector.y = 40
@@ -259,11 +265,11 @@ class Gravity_thing(pygame.sprite.Sprite):
             self.buoyancy()
         else: 
             self.inWater = False
-            if self != player or not self.hooked[0]:
+            if not self.amIHooked():
                 self.gravity()
 
 
-        if self != player or not self.hooked[0]:
+        if not self.amIHooked():
             self.friction()
         self.onGround = False
 
@@ -274,12 +280,12 @@ class Gravity_thing(pygame.sprite.Sprite):
             if block != self:
                 if self.vector.x > 0:
                     self.rect.right = block.rect.left
-                    if self != player or not self.hooked[0]:
+                    if not self.amIHooked():
                         if self.vector.y > 5:
                             self.vector.y *= 0.5
                 elif self.vector.x < 0:
                     self.rect.left = block.rect.right
-                    if self != player or not self.hooked[0]:
+                    if not self.amIHooked():
                         if self.vector.y > 5:
                             self.vector.y *= 0.5
                 self.vector.x = 0
@@ -339,7 +345,7 @@ class Gravity_thing(pygame.sprite.Sprite):
 
             self.freefall = False
         
-        if self == player and self.hooked[0]:
+        if self.amIHooked():
             if spikess or box_hit_list or block_hit_list:
                 self.end_hook()
 
@@ -386,8 +392,10 @@ class Player(Creature):
         self.player_image = pygame.image.load(r'character.png')
 
     def end_hook(self):
-        self.hooked[0].kill()
-        self.hooked = [False, 0, 0, 0]
+        try: 
+            self.hooked[0].kill()
+        except AttributeError: pass
+        self.hooked = [False, 0, 0, 0, 0]
         self.freefall = True
         self.vector.y *= 1.5
 
@@ -402,7 +410,7 @@ class Player(Creature):
 
         if not self.freefall: self.vector.x = 0               
 
-        if not self.hooked[0] and not self.freefall:
+        if not self.amIHooked() and not self.freefall:
             rope_collisions = pygame.sprite.spritecollide(self, nodes, False)
             if not rope_collisions:
                 self.onRope = False
@@ -439,10 +447,11 @@ class Player(Creature):
                 del(self)
                 return
 
-
         if self.hooked[0]:
-
-                x,y = self.hooked[0].rect.center
+            if not self.hooked[1].success:
+                self.hooked[1].sticking()
+            else:
+                x,y = self.hooked[1].node.rect.center
                 pygame.draw.line(screen, [0,0,0], [player.rect.center[0], player.rect.center[1]],[x,y])
 
                 vector_to_me = (x - self.rect.center[0], y - self.rect.center[1])
@@ -454,31 +463,31 @@ class Player(Creature):
 
                     perp_vector = (1, -vector_to_me[0]/vector_to_me[1])
 
-                    k = self.hooked[2]/(abs(perp_vector[0]) + abs(perp_vector[1]))
+                    k = self.hooked[3]/(abs(perp_vector[0]) + abs(perp_vector[1]))
                     
-                    if self.hooked[3] == "right":
+                    if self.hooked[4] == "right":
                         multiply = 1
                     else: multiply = -1
 
                     self.vector.x = perp_vector[0]*k*multiply
                     self.vector.y = perp_vector[1]*k*multiply
 
-                    if (self.hooked[3] == "right" and x < self.rect.center[0]) or (self.hooked[3] == "left" and x > self.rect.center[0]):
+                    if (self.hooked[4] == "right" and x < self.rect.center[0]) or (self.hooked[4] == "left" and x > self.rect.center[0]):
 
-                            self.hooked[2] *= 0.99 - 0.07*self.hooked[4]
+                            self.hooked[3] *= 0.99 - 0.07*self.hooked[5]
 
                             mag = self.vector.magnitude()
 
-                            if abs(mag*((y - self.rect.center[1])/self.hooked[1])) < 0.8:
-                                self.hooked[2] *= 2.5
-                                self.hooked[4] += 1
+                            if abs(mag*((y - self.rect.center[1])/self.hooked[2])) < 0.8:
+                                self.hooked[3] *= 2.5
+                                self.hooked[5] += 1
                                 if abs(x-self.rect.center[0]) < 8:
-                                    self.hooked[2] = 0
-                                elif self.hooked[3] == "right":
-                                    self.hooked[3] = "left"
-                                else: self.hooked[3] = "right"
+                                    self.hooked[3] = 0
+                                elif self.hooked[4] == "right":
+                                    self.hooked[4] = "left"
+                                else: self.hooked[4] = "right"
                     
-                    else: self.hooked[2] *= 1.06
+                    else: self.hooked[3] *= 1.06
 
 
         self.moving()
@@ -609,45 +618,60 @@ class Rope(pygame.sprite.Sprite):
 class Hook(pygame.sprite.Sprite):
     def __init__(self, position, who):
         super(Hook, self).__init__()
-        x = who.rect.center[0]
-        y = who.rect.center[1]-25
+        self.x = who.rect.center[0]
+        self.y = who.rect.center[1]-25
         self.node = None
+        self.who = who
+        self.progress = 1
+        self.position = position
+        self.success = False
         
-        vector_x = (x - position[0])/35
-        if vector_x > 0:
-            vector_x = min(vector_x, 15)
-        else: vector_x = max(vector_x, -15)
-        vector_y = (y - position[1])/35
-        if vector_y > 0:
-            vector_y = min(vector_y, 15)
-        else: vector_y = max(vector_y, -15)
+        self.who.hooked[0] = True
+        self.who.hooked[1] = self
 
-        i = 1
-        while not sum([wall.rect.collidepoint(x,y) for wall in walls]):
-            x -= vector_x
-            y -= vector_y
-            i += 1
+        self.vector_x = (self.x - position[0])/35
+        if self.vector_x > 0:
+            self.vector_x = min(self.vector_x, 15)
+        else: self.vector_x = max(self.vector_x, -15)
+        self.vector_y = (self.y - position[1])/35
+        if self.vector_y > 0:
+            self.vector_y = min(self.vector_y, 15)
+        else: self.vector_y = max(self.vector_y, -15)
 
-            if i > 100:
-                pygame.draw.line(screen, [0,0,0], [player.rect.center[0], player.rect.center[1]], [x, y])
-                pygame.display.flip()
-                break
+        if self.vector_y < 0:
+            self.who.end_hook()
+            return
 
-        if i < 100 and y < who.rect.y:
-            node = Node([x,y], self)
-            node.stick([x,y])
-            self.node = node
+        self.sticking()
 
-            dist_x = abs(x - player.rect.center[0])
-            dist_y = abs(y - player.rect.center[1])
-            dist = (dist_x**2+dist_y**2)**0.5
 
-            if x > who.rect.center[0]:
-                direction = "right"
-            else: direction = "left"
+    def sticking(self):
+        for _ in range(4):
+            if not sum([wall.rect.collidepoint(self.x,self.y) for wall in walls]):
+                self.x -= self.vector_x
+                self.y -= self.vector_y
+                self.progress += 1
+                pygame.draw.line(screen, [0,0,0], [player.rect.center[0], player.rect.center[1]], [self.x, self.y])
 
-            if dist > 100:
-                player.hooked = [self.node, dist, who.velocity*1.35, direction, 1]
+                if self.progress > 100:
+                    self.who.end_hook()
+
+            else:
+                self.success = True
+                node = Node([self.x,self.y], self)
+                node.stick([self.x,self.y])
+                self.node = node
+
+                dist_x = abs(self.x - player.rect.center[0])
+                dist_y = abs(self.y - player.rect.center[1])
+                dist = (dist_x**2+dist_y**2)**0.5
+
+                if self.x > self.who.rect.center[0]:
+                    direction = "right"
+                else: direction = "left"
+
+                if dist > 50:
+                    player.hooked = [True, self, dist, self.who.velocity*1.35, direction, 1]
         
                 
 
@@ -845,7 +869,7 @@ class Game():
             elif event.type == pygame.MOUSEBUTTONDOWN:
                 x,y = pygame.mouse.get_pos()
                 #destroy_block_by_location((x, y))
-                Hook([x,y], player)
+                Hook((x,y), player)
             elif event.type == pygame.MOUSEBUTTONUP:
                 player.end_hook()
 
