@@ -441,7 +441,8 @@ class Player(Creature):
 
     def end_hook(self):
         try: 
-            self.hooked[0].kill()
+            self.hooked[1].node.kill()
+            self.hookedp[1].kill()
         except AttributeError: pass
         self.hooked = [False, 0, 0, 0, 0]
         self.freefall = True
