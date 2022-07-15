@@ -218,7 +218,7 @@ class Gravity_thing(pygame.sprite.Sprite):
     
     # FInd out if the object is hooked
     def amIHooked(self):
-        if self != player or not self.hooked[0] or not self.hooked[1].success:
+        if self != player or not self.hookInfo["tryingToHook"] or not self.hookInfo["hookObject"].successfullyHooked:
             return False
         else:
             return True
@@ -456,16 +456,16 @@ class Player(Creature):
         super().__init__([SCREEN_WIDTH//2, SCREEN_HEIGHT//2], 8, 100, False)
         self.coins = 0
         self.onRope = False
-        self.hooked = [False, 0, 0, 0]
+        self.hookInfo = {"tryingToHook":False, "hookObject":None, "distance":0, "velocity":0, "direction":"left", "swingsCounter":0}
         self.player_image = pygame.image.load(r'character.png')
 
 
     def end_hook(self):
         try: 
-            self.hooked[1].node.kill()
-            self.hookedp[1].kill()
+            self.hookInfo["hookObject"].node.kill()
+            self.hookInfo["hookObject"].kill()
         except AttributeError: pass
-        self.hooked = [False, 0, 0, 0, 0]
+        self.hookInfo = {"tryingToHook":False, "hookObject":None, "distance":0, "velocity":0, "direction":"left", "swingsCounter":0}
         self.freefall = True
         self.vector.y *= 1.5
 
@@ -517,51 +517,61 @@ class Player(Creature):
                 del(self)
                 return
 
-        if self.hooked[0]:
-            if not self.hooked[1].success:
-                self.hooked[1].sticking()
+        if self.hookInfo["tryingToHook"]:
+            # If the hook is not sticked yet keep trying
+            if not self.hookInfo["hookObject"].successfullyHooked:
+                self.hookInfo["hookObject"].sticking()
             else:
-                x,y = self.hooked[1].node.rect.center
-
-                if self.hooked[1].node.platform:
-                        self.rect.move_ip(self.hooked[1].node.platform.vector[0], self.hooked[1].node.platform.vector[1])
+                x,y = self.hookInfo["hookObject"].node.rect.center
+                
+                # Move with platform if hooked to a platform
+                if self.hookInfo["hookObject"].node.platform:
+                        self.rect.move_ip(self.hookInfo["hookObject"].node.platform.vector[0], self.hookInfo["hookObject"].node.platform.vector[1])
 
                 pygame.draw.line(screen, [0,0,0], [player.rect.center[0], player.rect.center[1]],[x,y])
 
                 vector_to_me = (x - self.rect.center[0], y - self.rect.center[1])
 
+                # If the hook is too short in the y direction, end it
+                # Prevents division by 0 and awkward situations
                 if abs(vector_to_me[1]) < 40:
                     self.end_hook()
                 else:
                     self.vector.x = 0; self.vector.y = 0
 
-                    perp_vector = (1, -vector_to_me[0]/vector_to_me[1])
+                    perpendicular_vector = (1, -vector_to_me[0]/vector_to_me[1])
 
-                    k = self.hooked[3]/(abs(perp_vector[0]) + abs(perp_vector[1]))
+                    k = self.hookInfo["velocity"]/(1 + abs(perpendicular_vector[1]))
                     
-                    if self.hooked[4] == "right":
+                    if self.hookInfo["direction"] == "right":
                         multiply = 1
                     else: multiply = -1
 
-                    self.vector.x = perp_vector[0]*k*multiply
-                    self.vector.y = perp_vector[1]*k*multiply
+                    self.vector.x = perpendicular_vector[0]*k*multiply
+                    self.vector.y = perpendicular_vector[1]*k*multiply
 
-                    if (self.hooked[4] == "right" and x < self.rect.center[0]) or (self.hooked[4] == "left" and x > self.rect.center[0]):
-
-                            self.hooked[3] *= 0.99 - 0.07*self.hooked[5]
+                    # If I am going up the curve (moving upwards)
+                    if (self.hookInfo["direction"] == "right" and x < self.rect.center[0]) or (self.hookInfo["direction"] == "left" and x > self.rect.center[0]):
+                            # Decrease velocity, more swings already done on this hook >>> bigger decrease (swingCounter)
+                            self.hookInfo["velocity"] *= 0.99 - 0.07*self.hookInfo["swingsCounter"]
 
                             mag = self.vector.magnitude()
 
-                            if abs(mag*((y - self.rect.center[1])/self.hooked[2])) < 0.8:
-                                self.hooked[3] *= 2.5
-                                self.hooked[5] += 1
-                                if abs(x-self.rect.center[0]) < 8:
-                                    self.hooked[3] = 0
-                                elif self.hooked[4] == "right":
-                                    self.hooked[4] = "left"
-                                else: self.hooked[4] = "right"
+                            # If it is on the peak of the swing, cannot rise anymore
+                            if abs(mag*((y - self.rect.center[1])/self.hookInfo["distance"])) < 0.8:
+                                # Add some velocity
+                                self.hookInfo["velocity"] *= 2.5
+                                # Increase swings counter
+                                self.hookInfo["swingsCounter"] += 1
+                                # If the peak happens to be too near to the very bottom (right under the sticked node), stop moving
+                                if abs(x-self.rect.center[0]) < 5:
+                                    self.hookInfo["velocity"] = 0
+                                # Change direction of swing
+                                if self.hookInfo["direction"] == "right":
+                                    self.hookInfo["direction"] = "left"
+                                else: self.hookInfo["direction"] = "right"
                     
-                    else: self.hooked[3] *= 1.06
+                    else: self.hookInfo["velocity"] *= 1.06
 
 
         self.moving()
@@ -705,10 +715,10 @@ class Hook(pygame.sprite.Sprite):
         self.who = who
         self.progress = 1
         self.position = position
-        self.success = False
+        self.successfullyHooked = False
         
-        self.who.hooked[0] = True
-        self.who.hooked[1] = self
+        self.who.hookInfo["tryingToHook"] = True
+        self.who.hookInfo["hookObject"] = self
 
         self.vector_x = (self.x - position[0])/35
         if self.vector_x > 0:
@@ -738,7 +748,7 @@ class Hook(pygame.sprite.Sprite):
                     self.who.end_hook()
 
             else:
-                self.success = True
+                self.successfullyHooked = True
                 node = Node([self.x,self.y], self)
                 node.stick([self.x,self.y])
                 self.node = node
@@ -752,7 +762,7 @@ class Hook(pygame.sprite.Sprite):
                 else: direction = "left"
 
                 if dist > 50:
-                    player.hooked = [True, self, dist, self.who.velocity*1.35, direction, 1]
+                    player.hookInfo = {"tryingToHook":True, "hookObject":self, "distance":dist, "velocity":self.who.velocity*1.35, "direction":direction, "swingsCounter":1}
         
                 
 
