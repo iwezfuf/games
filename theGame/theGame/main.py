@@ -63,7 +63,7 @@ level = (
         "PPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPTTTTPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPTTTPPPPPPPPPPPPPPPPPPP",
         "PPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPP")
 
-
+# Find out if object is visible on the screen
 def is_on_screen(object):
     if pygame.sprite.collide_rect(screeen, object):
         return True
@@ -171,7 +171,7 @@ class Water(pygame.sprite.Sprite):
         
 
     def update_water_blocks_above_and_below_me(self, above=True, below=True):
-        # below
+        # Check for block of water below
         if below:
             self.water_blocks_below_me = []
             potential_spots = ((0, 1*gravity_direction), (1, 1*gravity_direction), (-1, 1*gravity_direction))
@@ -181,7 +181,7 @@ class Water(pygame.sprite.Sprite):
                     if water_block.rect.collidepoint(new_spot):
                         self.water_blocks_below_me.append(water_block)
 
-        # above
+        # Check for blocks of water above
         if above:
             self.water_blocks_above_me = []
             potential_spots = ((0, -1*gravity_direction), (1, -1*gravity_direction), (-1, -1*gravity_direction))
@@ -216,7 +216,7 @@ class Gravity_thing(pygame.sprite.Sprite):
         all_sprites.add(self)
         gravity_things.add(self)
     
-
+    # FInd out if the object is hooked
     def amIHooked(self):
         if self != player or not self.hooked[0] or not self.hooked[1].success:
             return False
@@ -280,6 +280,7 @@ class Gravity_thing(pygame.sprite.Sprite):
         
             
     def moving(self):
+        # Update movement direction
         if self.vector.x > 0:
             self.direction = "right"
         if self.vector.x < 0:
@@ -307,6 +308,8 @@ class Gravity_thing(pygame.sprite.Sprite):
 
         if not self.amIHooked():
             self.friction()
+        
+        # Assume object is in air, if it is not, it will get changed in collision tests below
         self.onGround = False
 
         if self.inWater or self.freefall:
@@ -314,6 +317,7 @@ class Gravity_thing(pygame.sprite.Sprite):
 
         self.rect.move_ip(self.vector.x, 0)
         
+        # Wall collision handling in y direction
         block_hit_list = pygame.sprite.spritecollide(self, walls, False)
         for block in block_hit_list:
             if block != self:
@@ -328,7 +332,8 @@ class Gravity_thing(pygame.sprite.Sprite):
                         if self.vector.y > 5:
                             self.vector.y *= 0.5
                 self.vector.x = 0
-        
+
+        # Box collision handling in x direction
         box_hit_list = pygame.sprite.spritecollide(self, boxes, False)
         for box in box_hit_list:
             if box != self:
@@ -341,7 +346,8 @@ class Gravity_thing(pygame.sprite.Sprite):
 
  
         self.rect.move_ip(0, self.vector.y)
-        
+
+        # Wall collision handling in y direction
         block_hit_list = pygame.sprite.spritecollide(self, walls, False)
         box_hit_list = pygame.sprite.spritecollide(self, boxes, False)
         for block in block_hit_list:
@@ -357,7 +363,7 @@ class Gravity_thing(pygame.sprite.Sprite):
                         self.onGround = True
                         self.standingOn = block
                 self.vector.y = 0
-
+        # Box collision handling in y direction
         box_hit_list = pygame.sprite.spritecollide(self, boxes, False)
         for box in box_hit_list:
             if box != self:
@@ -375,7 +381,7 @@ class Gravity_thing(pygame.sprite.Sprite):
                     #box.move(0, -box.speed)
                 self.vector.y = 0
 
-
+        # Spikes collision handling
         spikes_hit_list = pygame.sprite.spritecollide(self, spikes, False)
         for spike in spikes_hit_list:
             if self.rect.bottom < spike.rect.bottom:
@@ -388,7 +394,7 @@ class Gravity_thing(pygame.sprite.Sprite):
 
             self.freefall = False
         
-
+        # Trampoline collision handling
         trampolines_hit_list = pygame.sprite.spritecollide(self, trampolines, False)
         for trampoline in trampolines_hit_list:
             self.freefall = False
@@ -401,17 +407,17 @@ class Gravity_thing(pygame.sprite.Sprite):
                 self.rect.top = trampoline.rect.bottom
                 self.vector.y = 0
 
-        
+        # End hook when crashing into something
         if self.amIHooked():
             if spikes_hit_list or box_hit_list or block_hit_list or trampolines_hit_list:
                 self.end_hook()
 
-        
+        # Move with platform when on it
         if isinstance(self.standingOn, MovingPlatform):
             if self.rect.bottom == self.standingOn.rect.top:
                 self.rect.move_ip(self.standingOn.vector[0], self.standingOn.vector[1])
 
-        
+        # Take damage when hit with a bulllet
         if pygame.sprite.spritecollideany(self, bullets):
             self.hp_change(-20)
 
@@ -452,6 +458,7 @@ class Player(Creature):
         self.onRope = False
         self.hooked = [False, 0, 0, 0]
         self.player_image = pygame.image.load(r'character.png')
+
 
     def end_hook(self):
         try: 
