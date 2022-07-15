@@ -526,7 +526,8 @@ class Player(Creature):
                 
                 # Move with platform if hooked to a platform
                 if self.hookInfo["hookObject"].node.platform:
-                        self.rect.move_ip(self.hookInfo["hookObject"].node.platform.vector[0], self.hookInfo["hookObject"].node.platform.vector[1])
+                        platform_vector = self.hookInfo["hookObject"].node.platform.vector
+                        self.rect.move_ip(platform_vector[0], platform_vector[1])
 
                 pygame.draw.line(screen, [0,0,0], [player.rect.center[0], player.rect.center[1]],[x,y])
 
