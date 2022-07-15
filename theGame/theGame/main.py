@@ -212,6 +212,7 @@ class Gravity_thing(pygame.sprite.Sprite):
         self.onRope = False
         self.freefall = False
         self.velocity = 0
+        self.standingOn = None
         all_sprites.add(self)
         gravity_things.add(self)
     
@@ -308,6 +309,9 @@ class Gravity_thing(pygame.sprite.Sprite):
             self.friction()
         self.onGround = False
 
+        if self.inWater or self.freefall:
+            self.standingOn = None
+
         self.rect.move_ip(self.vector.x, 0)
         
         block_hit_list = pygame.sprite.spritecollide(self, walls, False)
@@ -346,10 +350,12 @@ class Gravity_thing(pygame.sprite.Sprite):
                     self.rect.bottom = block.rect.top
                     if gravity_direction == 1:
                         self.onGround = True
+                        self.standingOn = block
                 elif self.vector.y < 0:
                     self.rect.top = block.rect.bottom
                     if gravity_direction == -1:
                         self.onGround = True
+                        self.standingOn = block
                 self.vector.y = 0
 
         box_hit_list = pygame.sprite.spritecollide(self, boxes, False)
@@ -359,11 +365,13 @@ class Gravity_thing(pygame.sprite.Sprite):
                     self.rect.bottom = box.rect.top
                     if gravity_direction == 1:
                         self.onGround = True
+                        self.standingOn = box
                     #box.move(0, box.speed)
                 elif self.vector.y < 0:
                     self.rect.top = box.rect.bottom
                     if gravity_direction == -1:
                         self.onGround = True
+                        self.standingOn = box
                     #box.move(0, -box.speed)
                 self.vector.y = 0
 
@@ -380,6 +388,7 @@ class Gravity_thing(pygame.sprite.Sprite):
 
             self.freefall = False
         
+
         trampolines_hit_list = pygame.sprite.spritecollide(self, trampolines, False)
         for trampoline in trampolines_hit_list:
             self.freefall = False
@@ -396,6 +405,11 @@ class Gravity_thing(pygame.sprite.Sprite):
         if self.amIHooked():
             if spikes_hit_list or box_hit_list or block_hit_list or trampolines_hit_list:
                 self.end_hook()
+
+        
+        if isinstance(self.standingOn, MovingPlatform):
+            if self.rect.bottom == self.standingOn.rect.top:
+                self.rect.move_ip(self.standingOn.vector[0], self.standingOn.vector[1])
 
         
         if pygame.sprite.spritecollideany(self, bullets):
