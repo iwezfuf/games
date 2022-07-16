@@ -1,4 +1,3 @@
-from numpy import isin
 from pygame.locals import *
 import random
 import time
