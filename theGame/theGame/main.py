@@ -1,3 +1,4 @@
+from numpy import isin
 from pygame.locals import *
 import random
 import time
@@ -35,33 +36,33 @@ gravity_direction = gravity[1]/abs(gravity[1])
 buoyancy = pygame.Vector2((0, -0.55))
 
 level = (
+        "UUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUU",
         "PPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPP",
-        "PPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPP",
-        "PP                                                                                                                            PP",
-        "PP                                                                                                                            PP",
-        "PP                                                   M                 M                                                      PP",
-        "PP              PP    PPPPPPPPPPP                                                                                             PP",
-        "PP                                WWWWWW                                                                                      PP",
-        "PP               WWWWWWWWW                                                                                                    PP",
-        "PP                WWWWWW                                                                                                      PP",
-        "PP      PPP       WWWWW                      M              M                      PPPPPPPPPPPP                               PP",
-        "PP PP P                                                                                                                       PP",
-        "PP     M       M      B     SSSSSSS                                                                                           PP",
-        "PP                 PPPPPP                   PPPPPPPPPPPPPPPPTTTTTPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPP        PPPPPPPPPPPPPPPPP",
-        "PP          3                                                                                                                 PP",
-        "PP         PPPPPPP                                   M            M                                                           PP",
-        "PP                                                                                                                            PP",
-        "PP                     PPTTPP                                                                                                 PP",
-        "PP         <B                                                                                                                 PP",
-        "PP   PPPPPPPPPPP                       WWWWWWW                                                                                PP",
-        "PP                    >P B         WWWWWWW                                  PPPPPPPPP                                         PP",
-        "PP                 PPPPPPPPPPP  P  WWWWWWW                                                                                    PP",
-        "PP                              P  WWWWWWWWWWWWWWWW                                                                           PP",
-        "PP                              P  WWWWWWW                                                                                    PP",
-        "PP                              P  WWWWWWW                                                                                    PP",
-        "PP                              P  WWWWWWW                                                                                    PP",
-        "PPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPTTTTPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPTTTPPPPPPPPPPPPPPPPPPP",
-        "PPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPP")
+        "UU                                                                                                                            UU",
+        "UU                                                                                                                            UU",
+        "UU                                                   M                 M                                                      UU",
+        "UU              PP    PPPPPPPPPPP                                                                                             UU",
+        "UU                                WWWWWW                                                                                      UU",
+        "UU               WWWWWWWWW                                                                                                    UU",
+        "UU                WWWWWW                                                                                                      UU",
+        "UU      PPP       WWWWW                      M              M                      PPPPPPPPPPPP                               UU",
+        "UU PP P                                                                                                                       UU",
+        "UU     M       M      B     SSSSSSS                                                                                           UU",
+        "UU                 PPPPPP                   PPPPPPPPPPPPPPPPTTTTTPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPP        PPPPPPPPPPPPPPPUU",
+        "UU          3                                                                                                                 UU",
+        "UU         PPPPPPP                                   M            M                                                           UU",
+        "UU                                                                                                                            UU",
+        "UU                     PPTTPP                                                                                                 UU",
+        "UU         <B                                                                                                                 UU",
+        "UU   PPPPPPPPPPP                       WWWWWWW                                                                                UU",
+        "UU                    >P B         WWWWWWW                                  PPPPPPPPP                                         UU",
+        "UU                 PPPPPPPPPPP  P  WWWWWWW                                                                                    UU",
+        "UU                              P  WWWWWWWWWWWWWWWW                                                                           UU",
+        "UU                              P  WWWWWWW                                                                                    UU",
+        "UU                              P  WWWWWWW                                                                                    UU",
+        "UU                              P  WWWWWWW                                                                                    UU",
+        "UUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUU",
+        "UUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUU")
 
 # Find out if object is visible on the screen
 def is_on_screen(object):
@@ -91,7 +92,17 @@ class Wall(pygame.sprite.Sprite):
         self.surf.fill(color)
         self.rect = self.surf.get_rect(bottomleft=center)
         all_sprites.add(self)
-        walls.add(self)
+        solidblocks.add(self)
+
+
+class Undestructable(pygame.sprite.Sprite):
+    def __init__(self, center):
+        super(Undestructable, self).__init__()
+        self.surf = pygame.Surface([TILE_SIZE, TILE_SIZE])
+        self.surf.fill((0,0,0))
+        self.rect = self.surf.get_rect(bottomleft=center)
+        all_sprites.add(self)
+        solidblocks.add(self)
 
 
 class MovingPlatform(pygame.sprite.Sprite):
@@ -101,7 +112,7 @@ class MovingPlatform(pygame.sprite.Sprite):
         self.surf.fill([255,0,0])
         self.rect = self.surf.get_rect(bottomleft=start)
         all_sprites.add(self)
-        walls.add(self)
+        solidblocks.add(self)
         movingplatforms.add(self)
         self.start = start
         self.end = end
@@ -160,7 +171,7 @@ class Water(pygame.sprite.Sprite):
             potential_spots = ((0, 1*gravity_direction), (1, 1*gravity_direction), (-1, 1*gravity_direction))
             for spot in potential_spots:
                 new_spot = (int(self.rect.center[0]+spot[0]*TILE_SIZE), int(self.rect.center[1]+spot[1]*TILE_SIZE))
-                if not any(wall.rect.collidepoint(new_spot) for wall in walls) and not any(water_block.rect.collidepoint(new_spot) for water_block in water):
+                if not any(solidblock.rect.collidepoint(new_spot) for solidblock in solidblocks) and not any(water_block.rect.collidepoint(new_spot) for water_block in water):
                     self.rect.move_ip(spot[0]*TILE_SIZE, spot[1]*TILE_SIZE)
 
                     for i in self.water_blocks_above_me:
@@ -318,7 +329,7 @@ class Gravity_thing(pygame.sprite.Sprite):
         self.rect.move_ip(self.vector.x, 0)
         
         # Wall collision handling in y direction
-        block_hit_list = pygame.sprite.spritecollide(self, walls, False)
+        block_hit_list = pygame.sprite.spritecollide(self, solidblocks, False)
         for block in block_hit_list:
             if block != self:
                 if self.vector.x > 0:
@@ -348,7 +359,7 @@ class Gravity_thing(pygame.sprite.Sprite):
         self.rect.move_ip(0, self.vector.y)
 
         # Wall collision handling in y direction
-        block_hit_list = pygame.sprite.spritecollide(self, walls, False)
+        block_hit_list = pygame.sprite.spritecollide(self, solidblocks, False)
         box_hit_list = pygame.sprite.spritecollide(self, boxes, False)
         for block in block_hit_list:
             if block != self:
@@ -739,7 +750,27 @@ class Hook(pygame.sprite.Sprite):
 
     def sticking(self):
         for _ in range(4):
-            if not sum([wall.rect.collidepoint(self.x,self.y) for wall in walls]):
+            for block in solidblocks:
+                if block.rect.collidepoint(self.x,self.y) and not isinstance(block, Undestructable):
+                    self.successfullyHooked = True
+                    node = Node([self.x,self.y], self)
+                    node.stick([self.x,self.y])
+                    self.node = node
+
+                    dist_x = abs(self.x - player.rect.center[0])
+                    dist_y = abs(self.y - player.rect.center[1])
+                    dist = (dist_x**2+dist_y**2)**0.5
+
+                    if self.x > self.who.rect.center[0]:
+                        direction = "right"
+                    else: direction = "left"
+
+                    if dist > 50:
+                        player.hookInfo = {"tryingToHook":True, "hookObject":self, "distance":dist, "velocity":self.who.velocity*1.35, "direction":direction, "swingsCounter":1}
+            
+                    return
+
+            else:
                 self.x -= self.vector_x
                 self.y -= self.vector_y
                 self.progress += 1
@@ -748,23 +779,6 @@ class Hook(pygame.sprite.Sprite):
                 if self.progress > 100:
                     self.who.end_hook()
 
-            else:
-                self.successfullyHooked = True
-                node = Node([self.x,self.y], self)
-                node.stick([self.x,self.y])
-                self.node = node
-
-                dist_x = abs(self.x - player.rect.center[0])
-                dist_y = abs(self.y - player.rect.center[1])
-                dist = (dist_x**2+dist_y**2)**0.5
-
-                if self.x > self.who.rect.center[0]:
-                    direction = "right"
-                else: direction = "left"
-
-                if dist > 50:
-                    player.hookInfo = {"tryingToHook":True, "hookObject":self, "distance":dist, "velocity":self.who.velocity*1.35, "direction":direction, "swingsCounter":1}
-        
                 
 
 class Bullet(pygame.sprite.Sprite):
@@ -789,7 +803,7 @@ class Bullet(pygame.sprite.Sprite):
             self.kill()
             del(self)
             return
-        if pygame.sprite.spritecollideany(self, walls):
+        if pygame.sprite.spritecollideany(self, solidblocks):
             self.kill()
             del(self)
             return
@@ -838,7 +852,7 @@ pygame.time.set_timer(TURRETS, 2000)
 boxes = pygame.sprite.Group()
 all_sprites = pygame.sprite.Group()
 gravity_things = pygame.sprite.Group()
-walls = pygame.sprite.Group()
+solidblocks = pygame.sprite.Group()
 spikes = pygame.sprite.Group()
 clouds = pygame.sprite.Group()
 bullets = pygame.sprite.Group()
@@ -994,6 +1008,8 @@ class Game():
                     Trampoline([x,y])
                 if col == "C":
                     Coin([x,y])
+                if col == "U":
+                    Undestructable([x,y])
                 if col == "<":
                     Turret([x,y], -1)
                 if col == ">":
