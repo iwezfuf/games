@@ -60,7 +60,7 @@ level = (
         "UU                              P  WWWWWWW                                                                                    UU",
         "UU                              P  WWWWWWW                                                                                    UU",
         "UU                              P  WWWWWWW                                                                                    UU",
-        "UUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUU",
+        "UUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUTTTTTTTTTUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUU",
         "UUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUU")
 
 # Find out if object is visible on the screen
@@ -466,7 +466,7 @@ class Player(Creature):
         super().__init__([SCREEN_WIDTH//2, SCREEN_HEIGHT//2], 8, 100, False)
         self.coins = 0
         self.onRope = False
-        self.hookInfo = {"tryingToHook":False, "hookObject":None, "distance":0, "velocity":0, "direction":"left", "swingsCounter":0}
+        self.hookInfo = {"tryingToHook":False, "hookObject":None, "distance":1, "velocity":0, "direction":"left", "swingsCounter":0}
         self.player_image = pygame.image.load(r'character.png')
 
 
@@ -475,7 +475,7 @@ class Player(Creature):
             self.hookInfo["hookObject"].node.kill()
             self.hookInfo["hookObject"].kill()
         except AttributeError: pass
-        self.hookInfo = {"tryingToHook":False, "hookObject":None, "distance":0, "velocity":0, "direction":"left", "swingsCounter":0}
+        self.hookInfo = {"tryingToHook":False, "hookObject":None, "distance":1, "velocity":0, "direction":"left", "swingsCounter":0}
         self.freefall = True
         self.vector.y *= 1.5
 
@@ -575,7 +575,7 @@ class Player(Creature):
                                 # Increase swings counter
                                 self.hookInfo["swingsCounter"] += 1
                                 # If the peak happens to be too near to the very bottom (right under the sticked node), stop moving
-                                if abs(x-self.rect.center[0]) < 5:
+                                if abs(x-self.rect.center[0]) < 8:
                                     self.hookInfo["velocity"] = 0
                                 # Change direction of swing
                                 if self.hookInfo["direction"] == "right":
